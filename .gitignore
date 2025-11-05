@@ -17,3 +17,8 @@ static/
 .env
 .github/
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
