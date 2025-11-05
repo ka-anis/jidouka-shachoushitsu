@@ -77,3 +77,15 @@ Any modification to the system design must adhere to the following constraints:
 14. All internal communication must use the Docker network.
 
 Summary: A single, modular Django monolith deployed through Docker Compose behind one Nginx static IP. Any design change must preserve this isolation, one-command deployability, and safe Google Calendar integration.
+
+
+
+Decided to use sqlite:
+Database location made explicit:
+In settings.py, the SQLite database file (db.sqlite3) is placed inside your project’s base directory using os.path.join(BASE_DIR, 'db.sqlite3') — ensuring Django always knows where to find it.
+
+Persistent storage for Docker:
+In docker-compose.yml, a local folder (./data) is mounted to /app/data inside the container so that the database file lives outside the container and survives rebuilds or restarts.
+
+Declared persistent volume in Dockerfile:
+Added VOLUME /app/data so Docker recognizes that directory as persistent storage — keeping the SQLite file safe between container runs.
