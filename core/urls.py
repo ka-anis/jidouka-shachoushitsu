@@ -20,4 +20,6 @@ from . import views
 urlpatterns = [
     path("", views.home , name="home"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("mc-schedule/", views.mc_schedule_view, name="mc_schedule"),
+    path("mc-schedule/download/", views.download_mc_schedule_csv, name="download_mc_schedule_csv"),
 ]

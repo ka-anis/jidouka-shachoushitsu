@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MC Schedule</title>
+    <!-- Tailwind CDN for quick prototyping -->
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-900 text-white">
+    <div class="p-6 min-h-screen">
+      <div class="grid grid-cols-12 gap-4">
+        <!-- Main Table: Date, Member, MC -->
+        <div class="col-span-9 flex flex-col">
+          <div class="flex flex-col">
+            {% for entry in schedule_data %}
+              <div class="grid gap-0 border border-gray-700" style="grid-template-columns: 80px 1fr 200px;">
+                <!-- Date column (narrow) -->
+                <div class="py-3 px-2 text-center text-sm bg-black border-r border-gray-700">
+                  {{ entry.date_display }}
+                </div>
+                <!-- Member column (unchanged) -->
+                <div class="py-3 px-4 text-sm border-r border-gray-700 {{ entry.color_class }}">
+                  {{ entry.member }}
+                </div>
+                <!-- MC column (green shades, starts from shachou) -->
+                <div class="py-3 px-4 text-sm {{ entry.mc_color_class }}">
+                  {{ entry.mc }}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Right Panels -->
+        <div class="col-span-3 flex flex-col gap-4">
+          <!-- MC順番 Box -->
+          <div class="bg-green-900 border border-gray-700 rounded">
+            <div class="bg-green-800 border-b border-gray-700 py-2 px-4 text-sm font-semibold text-center">
+              MC順番
+            </div>
+            <div class="p-4 space-y-2">
+              {% for mc in mc_names %}
+                <div class="text-sm {% cycle 'bg-green-900' 'bg-green-800' 'bg-green-700' 'bg-green-600' 'bg-green-500' %} py-2 px-3 rounded">
+                  {{ mc }}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- 凡例 (Legend) Box -->
+          <div class="bg-black border border-white rounded">
+            <div class="border-b border-white py-2 px-4 text-sm font-semibold text-center">
+              凡例
+            </div>
+            <div class="p-4 space-y-3">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-4 bg-red-600 border border-gray-600"></div>
+                <span class="text-sm">社長</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-4 bg-green-600 border border-gray-600"></div>
+                <span class="text-sm">MC</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-4 bg-amber-800 border border-gray-600"></div>
+                <span class="text-sm">業務スピーチ</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-4 bg-blue-500 border border-gray-600"></div>
+                <span class="text-sm">３分間スピーチ</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CSV Download Button -->
+          <div class="flex justify-center">
+            <a href="{% url 'download_mc_schedule_csv' %}" 
+               class="bg-green-700 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded border border-green-600 transition">
+              CSVダウンロード
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

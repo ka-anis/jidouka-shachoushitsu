@@ -1,4 +1,7 @@
 from django.shortcuts import render
+from django.http import HttpResponse
+import csv
+from datetime import date, timedelta
 
 # Create your views here.
 def home(request):
@@ -7,13 +10,39 @@ def home(request):
 
 def dashboard_view(request):
     # Generate 65 static members (5 top / 30 middle / 30 bottom)
-    family_names = [
-        "佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺", "山本", "中村", "小林", "加藤",
-        "吉田", "山田", "佐々木", "山口", "松本", "井上", "木村", "林", "斎藤", "清水",
-    ]
-    given_names = ["太郎", "花子", "次郎", "一郎", "二郎", "三子", "健", "菜々", "誠", "彩"]
 
-    mc_names = ["佐藤", "高橋", "中村", "小林", "加藤", "吉田"]
+    placeholder_names = [
+        "岩村",
+        "チャラン",
+        "☆ミヌ",
+        "トン",
+        "佐藤",
+        "相川",
+        "田中",
+        "萩原",
+        "李",
+        "フォック",
+        "カルパニ",
+        "ビン",
+        "小倉",
+        "梶",
+        "ラフル",
+        "ニキル",
+        "石田",
+        "リブン",
+        "堀",
+        "諏佐",
+        "根岸",
+        "※齊藤",
+        "ノーラン",
+        "キン",
+        "ソ",
+        "カアン",
+        "伊藤",
+    ]
+
+    # Use first 6 placeholder names after the first entry for MC placeholders
+    mc_names = placeholder_names[1:7]
 
     members = []
     total = 65
@@ -21,9 +50,7 @@ def dashboard_view(request):
 
     base_date = date(2025, 11, 13)
     for i in range(total):
-        family = family_names[i % len(family_names)]
-        given = given_names[i % len(given_names)]
-        name = f"{family}{given}"
+        name = placeholder_names[i % len(placeholder_names)]
         # assign zones: first 5 -> top (Active), next 30 -> middle (休み), last 30 -> bottom (予定)
         if i < 5:
             status = "Active"
@@ -57,4 +84,192 @@ def dashboard_view(request):
     }
 
     return render(request, "core/dashboard.html", context)
+
+
+def mc_schedule_view(request):
+    """Display MC schedule and member assignment in a color-coded table"""
+    # Static schedule data
+    mc_names = ["大矢", "池上", "堀越", "黒澤", "森野"]
+
+    placeholder_names = [
+        "岩村",
+        "チャラン",
+        "ミヌ",
+        "トン",
+        "佐藤",
+        "相川",
+        "田中",
+        "萩原",
+        "李",
+        "フォック",
+        "カルパニ",
+        "ビン",
+        "小倉",
+        "梶",
+        "ラフル",
+        "ニキル",
+        "石田",
+        "リブン",
+        "堀",
+        "諏佐",
+        "根岸",
+        "齊藤",
+        "ノーラン",
+        "キン",
+        "ソ",
+        "カアン",
+        "伊藤",
+    ]
+
+    # Generate dates for the schedule - calculate days in month
+    base_date = date(2025, 11, 1)
+
+# Get last day of the month (Original Logic)
+    if base_date.month == 12:
+        last_day = date(base_date.year + 1, 1, 1) - timedelta(days=1)
+    else:
+        last_day = date(base_date.year, base_date.month + 1, 1) - timedelta(days=1)
+
+    days_in_month = last_day.day
+    schedule_data = []
+
+    # --- MODIFIED ITERATION LOGIC STARTS HERE ---
+    for day_number in range(days_in_month):
+        current_date = base_date + timedelta(days=day_number)
+        
+        # Check if the current date is a working day (Monday=0 to Friday=4)
+        # The weekday() method returns 5 for Saturday and 6 for Sunday.
+        if current_date.weekday() < 5: 
+            # Only append the date if it's Mon-Fri
+            schedule_data.append(current_date)
+
+    # Green shades for MC column (5 shades matching 5 MC people, from dark to light)
+    # Match dashboard green shades
+    green_shades = ["bg-green-900", "bg-green-800", "bg-green-700", "bg-green-600", "bg-green-500"]
+
+    for i in range(days_in_month):
+        member_name = placeholder_names[i % len(placeholder_names)]
+        # Determine role and color class based on position
+        # Match dashboard colors: green-800/90 for top, #7a3f2b (brown) for middle, teal-900/95 for bottom
+        if i == 0:
+            # Entry 1: Red with 社長
+            role = "社長"
+            color_class = "bg-red-600"
+            member = "中村"
+            mc = ""
+            mc_color_class = green_shades[0]  # MC column starts with first green shade from shachou
+        elif i < 6:
+            # Entries 2-6: Brown (matching dashboard middle band)
+            role = "メンバー"
+            color_class = green_shades[(i - 1) % len(green_shades)] # Match dashboard middle band brown
+            member = mc_names[(i - 1) % len(mc_names)]
+            mc = ""
+            # Use the same shade index as the MC name index
+            mc_color_class = green_shades[(i - 1) % len(green_shades)]
+        elif i < (days_in_month - 5):
+            # Middle entries: Teal (matching dashboard bottom band)
+            role = "メンバー"
+            color_class = "bg-teal-900"  # Match dashboard bottom band teal
+            member = member_name
+            mc = mc_names[(i - 1) % len(mc_names)]
+            # Use the same shade index as the MC name index
+            mc_color_class = green_shades[(i - 1) % len(green_shades)]
+        else:
+            # Last 5 entries: Brown (matching dashboard middle band)
+            role = "メンバー"
+            color_class = "bg-[#7a3f2b]"  # Match dashboard middle band brown
+            member = member_name
+            mc = mc_names[(i - 1) % len(mc_names)]
+            # Use the same shade index as the MC name index
+            mc_color_class = green_shades[(i - 1) % len(green_shades)]
+
+        schedule_data.append({
+            "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
+            "date_display": (base_date + timedelta(days=i)).strftime("%m/%d"),
+            "member": member,
+            "mc": mc,
+            "role": role,
+            "color_class": color_class,
+            "mc_color_class": mc_color_class,
+        })
+
+    context = {
+        "schedule_data": schedule_data,
+        "mc_names": mc_names,
+    }
+
+    return render(request, "core/mc_schedule.html", context)
+
+
+def download_mc_schedule_csv(request):
+    """Download MC schedule as CSV file"""
+    # Same static data as in the view
+    mc_names = ["大矢", "池上", "堀越", "黒澤", "森野"]
+    placeholder_names = [
+        "岩村",
+        "チャラン",
+        "ミヌ",
+        "トン",
+        "佐藤",
+        "相川",
+        "田中",
+        "萩原",
+        "李",
+        "フォック",
+        "カルパニ",
+        "ビン",
+        "小倉",
+        "梶",
+        "ラフル",
+        "ニキル",
+        "石田",
+        "リブン",
+        "堀",
+        "諏佐",
+        "根岸",
+        "齊藤",
+        "ノーラン",
+        "キン",
+        "ソ",
+        "カアン",
+        "伊藤",
+    ]
+    base_date = date(2025, 11, 1)
+    # Get last day of the month
+    if base_date.month == 12:
+        last_day = date(base_date.year + 1, 1, 1) - timedelta(days=1)
+    else:
+        last_day = date(base_date.year, base_date.month + 1, 1) - timedelta(days=1)
+
+    days_in_month = last_day.day
+    schedule_data = []
+
+    for i in range(days_in_month):
+        if i == 0:
+            member = "placeholder_names[i % len(placeholder_names)]"
+            mc = ""
+        else:
+            member = placeholder_names[i % len(placeholder_names)]
+            mc = mc_names[(i - 1) % len(mc_names)]
+
+        schedule_data.append({
+            "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
+            "member": member,
+            "mc": mc,
+        })
+
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="mc_schedule.csv"'
+
+    # Write BOM for Excel UTF-8 support
+    response.write('\ufeff')
+
+    writer = csv.writer(response)
+    writer.writerow(['日付', 'メンバー', 'MC'])
+
+    for entry in schedule_data:
+        writer.writerow([entry['date'], entry['member'], entry['mc']])
+
+    return response
 
