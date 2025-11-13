@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Dashboard</title>
+    <!-- Tailwind CDN for quick prototyping -->
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-900 text-white">
+    <div class="p-6 min-h-screen">
+      <div class="grid grid-cols-12 gap-4">
+        <!-- Main table area (left) -->
+        <div class="col-span-10 flex flex-col">
+          <!-- Header row -->
+          <div class="grid grid-cols-8 gap-0 bg-green-900 border border-gray-700 text-sm font-semibold">
+            <div class="py-2 px-2 text-center border-r border-gray-700">状態</div>
+            <div class="py-2 px-2 text-center border-r border-gray-700">番号 (ID)</div>
+            <div class="py-2 px-2 border-r border-gray-700">名</div>
+            <div class="py-2 px-2 text-center border-r border-gray-700">経過日数</div>
+            <div class="py-2 px-2 text-center border-r border-gray-700">MC</div>
+            <div class="py-2 px-2 text-center border-r border-gray-700">スピーチ日時</div>
+            <div class="py-2 px-2 text-center border-r border-gray-700">スピーチ経験</div>
+            <div class="py-2 px-2 text-center">今のカレンダー</div>
+          </div>
+
+          <!-- Content area with three colored bands stacking naturally -->
+          <div class="flex flex-col" style="gap: 0;">
+            <!-- Top band (green) - 5 entries -->
+            <div class="bg-green-800/90 border border-gray-700 overflow-hidden">
+              <div class="overflow-y-auto text-sm">
+                {% for member in top_members %}
+                <div class="grid grid-cols-8 gap-0 items-center py-2 px-2 border-b border-gray-700">
+                  <div class="text-center">{{ member.status }}</div>
+                  <div class="text-center">{{ member.id }}</div>
+                  <div>{{ member.name }}</div>
+                  <div class="text-center">{{ member.days_passed }}</div>
+                  <div class="text-center">{{ member.mc }}</div>
+                  <div class="text-center text-xs">{{ member.speech_date }}</div>
+                  <div class="text-center">{{ member.speech_experience }}</div>
+                  <div class="text-center">{{ member.calendar }}</div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Middle band (brown) - 30 entries -->
+            <div class="bg-[#7a3f2b] border border-gray-700 overflow-hidden">
+              <div class="overflow-y-auto text-sm">
+                {% for member in middle_members %}
+                <div class="grid grid-cols-8 gap-0 items-center py-1 px-2 border-b border-gray-700">
+                  <div class="text-center">{{ member.status }}</div>
+                  <div class="text-center">{{ member.id }}</div>
+                  <div>{{ member.name }}</div>
+                  <div class="text-center">{{ member.days_passed }}</div>
+                  <div class="text-center">{{ member.mc }}</div>
+                  <div class="text-center text-xs">{{ member.speech_date }}</div>
+                  <div class="text-center">{{ member.speech_experience }}</div>
+                  <div class="text-center">{{ member.calendar }}</div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Bottom band (dark teal) - 30 entries -->
+            <div class="bg-teal-900/95 border border-gray-700 overflow-hidden">
+              <div class="overflow-y-auto text-sm">
+                {% for member in bottom_members %}
+                <div class="grid grid-cols-8 gap-0 items-center py-1 px-2 border-b border-gray-700">
+                  <div class="text-center">{{ member.status }}</div>
+                  <div class="text-center">{{ member.id }}</div>
+                  <div>{{ member.name }}</div>
+                  <div class="text-center">{{ member.days_passed }}</div>
+                  <div class="text-center">{{ member.mc }}</div>
+                  <div class="text-center text-xs">{{ member.speech_date }}</div>
+                  <div class="text-center">{{ member.speech_experience }}</div>
+                  <div class="text-center">{{ member.calendar }}</div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right side control panel -->
+        <aside class="col-span-2 flex flex-col items-center justify-start space-y-6 bg-black p-6 rounded">
+          <div class="w-full">
+            <div class="border border-white text-white rounded p-4 text-center">ユーザー</div>
+          </div>
+
+          <div class="w-full flex flex-col items-center space-y-3">
+            <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">メンバーを追加</button>
+            <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">メンバーを排除</button>
+            <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">送信</button>
+            <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">リトラクト</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </body>
+</html>
