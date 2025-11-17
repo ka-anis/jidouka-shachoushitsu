@@ -14,7 +14,7 @@ def dashboard_view(request):
     placeholder_names = [
         "岩村",
         "チャラン",
-        "☆ミヌ",
+        "ミヌ",
         "トン",
         "佐藤",
         "相川",
@@ -33,7 +33,7 @@ def dashboard_view(request):
         "堀",
         "諏佐",
         "根岸",
-        "※齊藤",
+        "齊藤",
         "ノーラン",
         "キン",
         "ソ",
@@ -51,7 +51,6 @@ def dashboard_view(request):
     base_date = date(2025, 11, 13)
     for i in range(total):
         name = placeholder_names[i % len(placeholder_names)]
-        # assign zones: first 5 -> top (Active), next 30 -> middle (休み), last 30 -> bottom (予定)
         if i < 5:
             status = "Active"
         elif i < 35:
