@@ -4,38 +4,41 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Dashboard</title>
-    <!-- Tailwind CDN for quick prototyping -->
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-gray-900 text-white">
     <div class="p-6 min-h-screen">
       <div class="grid grid-cols-12 gap-4">
+
         <!-- Main table area (left) -->
         <div class="col-span-10 flex flex-col">
+
           <!-- Header row -->
-          <div class="grid gap-0 bg-green-900 border border-gray-700 text-sm font-semibold" style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 48px 1.5fr 1fr 1fr;">
+          <div class="grid gap-0 bg-green-900 border border-gray-700 text-sm font-semibold"
+               style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1fr;">
             <div class="py-2 px-2 text-center border-r border-gray-700"></div>
             <div class="py-2 px-2 text-center border-r border-gray-700"></div>
             <div class="py-2 px-2 text-center border-r border-gray-700">状態</div>
             <div class="py-2 px-2 text-center border-r border-gray-700">番号 (ID)</div>
             <div class="py-2 px-2 border-r border-gray-700">名</div>
             <div class="py-2 px-2 text-center border-r border-gray-700">経過日数</div>
-            <div class="py-2 px-2 text-center border-r border-gray-700">MC</div>
             <div class="py-2 px-2 text-center border-r border-gray-700">スピーチ日時</div>
             <div class="py-2 px-2 text-center border-r border-gray-700">スピーチ種類</div>
             <div class="py-2 px-2 text-center">今のカレンダー</div>
           </div>
 
-          <!-- Content area with three colored bands stacking naturally -->
+          <!-- Content area -->
           <div class="flex flex-col" style="gap: 0;">
-            <!-- Top band (green) - 5 entries -->
+
+            <!-- TOP ZONE (All employees) -->
             <div class="bg-green-800/90 border border-gray-700 overflow-hidden">
               <div class="overflow-y-auto text-sm">
-                {% for member in top_members %}
-                <div class="grid gap-0 items-center py-2 px-2 border-b border-gray-700" style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 48px 1.5fr 1fr 1fr;" data-band="top" data-index="{{ forloop.counter0 }}">
+                {% for member in top_zone %}
+                <div class="grid gap-0 items-center py-2 px-2 border-b border-gray-700"
+                     style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1fr;">
+                  <!-- Up / Down arrows -->
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" 
-                            data-band="top" data-index="{{ forloop.counter0 }}" 
+                    <button class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                             {% if forloop.first %}disabled{% endif %}>
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
@@ -43,44 +46,48 @@
                     </button>
                   </div>
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" 
-                            data-band="top" data-index="{{ forloop.counter0 }}"
+                    <button class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                             {% if forloop.last %}disabled{% endif %}>
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                       </svg>
                     </button>
                   </div>
+
+                  <!-- 状態 checkbox -->
                   <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer">
+                    <input type="checkbox" class="w-4 h-4 cursor-pointer" {% if member.is_rotation_active %}checked{% endif %}>
                   </div>
+
+                  <!-- Employee data -->
                   <div class="text-center">{{ member.id }}</div>
                   <div>{{ member.name }}</div>
                   <div class="text-center">{{ member.days_passed }}</div>
-                  <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer" checked>
-                  </div>
+
                   <div class="text-center text-xs">{{ member.speech_date }}</div>
+
                   <div class="flex items-center justify-center py-1">
                     <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
                       <option value="業務">業務</option>
                       <option value="３分間">３分間</option>
                     </select>
                   </div>
+
                   <div class="text-center">{{ member.calendar }}</div>
                 </div>
                 {% endfor %}
               </div>
             </div>
 
-            <!-- Middle band (brown) - 30 entries -->
-            <div class="bg-[#7a3f2b] border border-gray-700 overflow-hidden">
+            <!-- BOTTOM ZONE (Members only) -->
+            <div class="bg-[#7a3f2b] border border-gray-700 overflow-hidden mt-4">
               <div class="overflow-y-auto text-sm">
-                {% for member in middle_members %}
-                <div class="grid gap-0 items-center py-1 px-2 border-b border-gray-700" style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 48px 1.5fr 1fr 1fr;" data-band="middle" data-index="{{ forloop.counter0 }}">
+                {% for member in bottom_zone %}
+                <div class="grid gap-0 items-center py-2 px-2 border-b border-gray-700"
+                     style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1fr;">
+                  <!-- Up / Down arrows -->
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" 
-                            data-band="middle" data-index="{{ forloop.counter0 }}"
+                    <button class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                             {% if forloop.first %}disabled{% endif %}>
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
@@ -88,80 +95,39 @@
                     </button>
                   </div>
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" 
-                            data-band="middle" data-index="{{ forloop.counter0 }}"
+                    <button class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                             {% if forloop.last %}disabled{% endif %}>
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                       </svg>
                     </button>
                   </div>
+
+                  <!-- 状態 checkbox -->
                   <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer">
+                    <input type="checkbox" class="w-4 h-4 cursor-pointer" {% if member.is_rotation_active %}checked{% endif %}>
                   </div>
+
+                  <!-- Employee data -->
                   <div class="text-center">{{ member.id }}</div>
                   <div>{{ member.name }}</div>
                   <div class="text-center">{{ member.days_passed }}</div>
-                  <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer">
-                  </div>
+
                   <div class="text-center text-xs">{{ member.speech_date }}</div>
+
                   <div class="flex items-center justify-center py-1">
                     <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
-                      <option value="業務">業務</option>
                       <option value="３分間">３分間</option>
+                      <option value="業務">業務</option>
                     </select>
                   </div>
+
                   <div class="text-center">{{ member.calendar }}</div>
                 </div>
                 {% endfor %}
               </div>
             </div>
 
-            <!-- Bottom band (dark teal) - 30 entries -->
-            <div class="bg-teal-900/95 border border-gray-700 overflow-hidden">
-              <div class="overflow-y-auto text-sm">
-                {% for member in bottom_members %}
-                <div class="grid gap-0 items-center py-1 px-2 border-b border-gray-700" style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 48px 1.5fr 1fr 1fr;" data-band="bottom" data-index="{{ forloop.counter0 }}">
-                  <div class="flex items-center justify-center py-1">
-                    <button class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" 
-                            data-band="bottom" data-index="{{ forloop.counter0 }}"
-                            {% if forloop.first %}disabled{% endif %}>
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="flex items-center justify-center py-1">
-                    <button class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" 
-                            data-band="bottom" data-index="{{ forloop.counter0 }}"
-                            {% if forloop.last %}disabled{% endif %}>
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer">
-                  </div>
-                  <div class="text-center">{{ member.id }}</div>
-                  <div>{{ member.name }}</div>
-                  <div class="text-center">{{ member.days_passed }}</div>
-                  <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer">
-                  </div>
-                  <div class="text-center text-xs">{{ member.speech_date }}</div>
-                  <div class="flex items-center justify-center py-1">
-                    <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
-                      <option value="業務">業務</option>
-                      <option value="３分間">３分間</option>
-                    </select>
-                  </div>
-                  <div class="text-center">{{ member.calendar }}</div>
-                </div>
-                {% endfor %}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -170,7 +136,6 @@
           <div class="w-full">
             <div class="border border-white text-white rounded p-4 text-center">ユーザー</div>
           </div>
-
           <div class="w-full flex flex-col items-center space-y-3">
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">メンバーを追加</button>
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">メンバーを排除</button>
@@ -178,6 +143,7 @@
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">リトラクト</button>
           </div>
         </aside>
+
       </div>
     </div>
   </body>

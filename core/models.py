@@ -11,8 +11,6 @@ class Employee(models.Model):
     email = models.EmailField(unique=True)
     employee_id = models.CharField(max_length=10, unique=True)
 
-
-
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
 
     is_rotation_active = models.BooleanField(default=True)
