@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import date
 
 # Create your models here.
 class Role(models.TextChoices):
@@ -15,6 +16,34 @@ class Employee(models.Model):
 
     is_rotation_active = models.BooleanField(default=True)
 
+
+    def days_since_last_speech(self):
+        last_entry = (
+            ScheduleEntry.objects
+            .filter(assigned_employee=self, is_cancelled=False)
+            .order_by('-date')
+            .first()
+        )
+
+        if not last_entry:
+            return None  # or return 0 / "No speeches yet"
+
+        delta = date.today() - last_entry.date
+        return delta.days
+
+    def next_speech_date(self):
+        next_entry = (
+            ScheduleEntry.objects
+            .filter(assigned_employee=self, is_cancelled=False, date__gt=date.today())
+            .order_by('date')
+            .first()
+        )
+
+        if not next_entry:
+            return None
+
+        return next_entry.date
+    
     def __str__(self):
         return self.name
 

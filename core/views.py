@@ -18,8 +18,8 @@ def dashboard_view(request):
             "id": emp.id,
             "name": emp.name,
             "is_rotation_active": emp.is_rotation_active,  # <-- correct
-            "days_passed": "",
-            "speech_date": "",
+            "days_passed": emp.days_since_last_speech(),
+            "speech_date": emp.next_speech_date(),
             "calendar": "",
         }
 

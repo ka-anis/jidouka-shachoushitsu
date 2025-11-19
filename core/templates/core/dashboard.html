@@ -62,9 +62,22 @@
                   <!-- Employee data -->
                   <div class="text-center">{{ member.id }}</div>
                   <div>{{ member.name }}</div>
-                  <div class="text-center">{{ member.days_passed }}</div>
+                  <div class="text-center">
+                    {% if member.days_passed is not None %}
+                      {{ member.days_passed }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </div>
 
-                  <div class="text-center text-xs">{{ member.speech_date }}</div>
+
+                  <div class="text-center text-xs">
+                    {% if member.speech_date %}
+                      {{ member.speech_date|date:"Y-m-d" }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </div>
 
                   <div class="flex items-center justify-center py-1">
                     <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
@@ -111,9 +124,22 @@
                   <!-- Employee data -->
                   <div class="text-center">{{ member.id }}</div>
                   <div>{{ member.name }}</div>
-                  <div class="text-center">{{ member.days_passed }}</div>
+                  <div class="text-center">
+                    {% if member.days_passed is not None %}
+                      {{ member.days_passed }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </div>
 
-                  <div class="text-center text-xs">{{ member.speech_date }}</div>
+
+                  <div class="text-center text-xs">
+                    {% if member.speech_date %}
+                      {{ member.speech_date|date:"Y-m-d" }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </div>
 
                   <div class="flex items-center justify-center py-1">
                     <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
