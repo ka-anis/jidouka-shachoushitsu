@@ -81,8 +81,8 @@
 
                   <div class="flex items-center justify-center py-1">
                     <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
-                      <option value="業務">業務</option>
                       <option value="３分間">３分間</option>
+                      <option value="業務">業務</option>
                     </select>
                   </div>
 
@@ -143,8 +143,8 @@
 
                   <div class="flex items-center justify-center py-1">
                     <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
-                      <option value="３分間">３分間</option>
                       <option value="業務">業務</option>
+                      <option value="３分間">３分間</option>
                     </select>
                   </div>
 
@@ -167,6 +167,10 @@
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">メンバーを排除</button>
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">送信</button>
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">リトラクト</button>
+            <a href="{% url 'mc_schedule' %}" 
+              class="w-40 py-2 border border-white text-white rounded text-center hover:bg-white hover:text-black transition">
+              確認画面へ
+            </a>
           </div>
         </aside>
 
