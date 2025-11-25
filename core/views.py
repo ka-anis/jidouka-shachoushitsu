@@ -93,3 +93,7 @@ def download_mc_schedule_csv(request):
         ])
 
     return response
+
+def send_to_calendar(request):
+    # As a demo I need this function  to send a google calendar even to a single user. 
+    return HttpResponse("Sent to Google Calendar!")

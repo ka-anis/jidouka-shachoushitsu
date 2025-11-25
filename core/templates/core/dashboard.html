@@ -165,7 +165,10 @@
           <div class="w-full flex flex-col items-center space-y-3">
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">メンバーを追加</button>
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">メンバーを排除</button>
-            <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">送信</button>
+            <a href="{% url 'send_to_calendar' %}" 
+              class="w-40 py-2 border border-white text-white rounded text-center hover:bg-white hover:text-black transition">
+              送信
+            </a>
             <button class="w-40 py-2 border border-white text-white rounded hover:bg-white hover:text-black transition">リトラクト</button>
             <a href="{% url 'mc_schedule' %}" 
               class="w-40 py-2 border border-white text-white rounded text-center hover:bg-white hover:text-black transition">
