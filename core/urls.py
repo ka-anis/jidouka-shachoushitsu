@@ -22,5 +22,9 @@ urlpatterns = [
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("mc-schedule/", views.mc_schedule_view, name="mc_schedule"),
     path("mc-schedule/download/", views.download_mc_schedule_csv, name="download_mc_schedule_csv"),
+    path("google/auth/", views.google_auth, name="google_auth"),
+    path("google/callback/", views.google_callback, name="google_callback"),
     path("send-to-calendar/", views.send_to_calendar, name="send_to_calendar"),
+    path("google/test-create/", views.test_create_event, name="test_create_event"),
+    
 ]

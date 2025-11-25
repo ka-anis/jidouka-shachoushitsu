@@ -1,8 +1,11 @@
-from django.shortcuts import render
+import os
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 import csv
 from datetime import date, timedelta
 from .models import Employee, ScheduleEntry, Role
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
 
 # Create your views here.
 def home(request):
@@ -97,3 +100,106 @@ def download_mc_schedule_csv(request):
 def send_to_calendar(request):
     # As a demo I need this function  to send a google calendar even to a single user. 
     return HttpResponse("Sent to Google Calendar!")
+
+
+
+
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # allow HTTP for local dev
+
+CLIENT_SECRETS_FILE = "credentials.json"
+REDIRECT_URI = "http://localhost:8000/google/callback/"
+
+
+# ---------------------------------------------------
+# 1) Redirect YOU to Google to authenticate
+# ---------------------------------------------------
+def google_auth(request):
+
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes=['https://www.googleapis.com/auth/calendar'],
+        redirect_uri=REDIRECT_URI,
+    )
+
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',            # IMPORTANT: gives long-lasting refresh token
+        include_granted_scopes='true',
+        prompt='consent'                  # forces Google to show the screen every time
+    )
+
+    request.session['state'] = state
+
+    return redirect(authorization_url)
+
+
+# ---------------------------------------------------
+# 2) Google redirects HERE after you click Allow
+# ---------------------------------------------------
+def google_callback(request):
+
+    state = request.session['state']
+
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes=['https://www.googleapis.com/auth/calendar'],
+        redirect_uri=REDIRECT_URI,
+        state=state,
+    )
+
+    flow.fetch_token(authorization_response=request.build_absolute_uri())
+
+    creds = flow.credentials
+
+    # Save credentials in the session
+    request.session['google_credentials'] = {
+        "token": creds.token,
+        "refresh_token": creds.refresh_token,
+        "client_id": creds.client_id,
+        "client_secret": creds.client_secret,
+        "token_uri": creds.token_uri,
+        "scopes": creds.scopes,
+    }
+
+    return HttpResponse("Authentication successful. You are now connected to Google Calendar.")
+
+
+from django.http import HttpResponse
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+
+def test_create_event(request):
+
+    creds_data = request.session.get("google_credentials")
+    if not creds_data:
+        return HttpResponse(" Not authenticated. Go to /google/auth/ first.")
+
+    creds = Credentials(
+        token=creds_data["token"],
+        refresh_token=creds_data["refresh_token"],
+        token_uri=creds_data["token_uri"],
+        client_id=creds_data["client_id"],
+        client_secret=creds_data["client_secret"],
+        scopes=creds_data["scopes"]
+    )
+
+    service = build("calendar", "v3", credentials=creds)
+
+    event_data = {
+        "summary": "朝礼スピーチ試し",
+        "start": {"date": "2025-12-01", "timeZone": "GMT+9"},
+        "end":   {"date": "2025-12-02", "timeZone": "GMT+9"},
+        "attendees": [
+            {"email": "khaled.gad@ejust.edu.eg"},
+            {"email": "k-mahrous@ar-system.co.jp"},
+            # {"email": "m-ogura@ar-system.co.jp"},
+            # {"email": "k-oya@ar-system.co.jp"},
+        ],
+    }
+
+    event = service.events().insert(calendarId="primary", body=event_data).execute()
+    return HttpResponse(f"✔ Event created: {event.get('htmlLink')}")
+
+
+
+
+
