@@ -1,11 +1,12 @@
 import os
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse
 import csv
 from datetime import date, timedelta
 from .models import Employee, ScheduleEntry, Role
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 
 # Create your views here.
 def home(request):
@@ -13,8 +14,8 @@ def home(request):
 
 
 def dashboard_view(request):
-    all_employees = Employee.objects.all().order_by("id")
-    member_employees = Employee.objects.filter(role=Role.MEMBER).order_by("id")
+    all_employees = Employee.objects.all().order_by("order", "id")
+    member_employees = Employee.objects.filter(role=Role.MEMBER).order_by("order", "id")
 
     def build_entry(emp):
         return {
@@ -163,9 +164,6 @@ def google_callback(request):
     return HttpResponse("Authentication successful. You are now connected to Google Calendar.")
 
 
-from django.http import HttpResponse
-from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
 
 def test_create_event(request):
 
@@ -199,5 +197,63 @@ def test_create_event(request):
 
 
 
+
+def move_up(request, employee_id):
+    emp = get_object_or_404(Employee, id=employee_id)
+    # Find employee with the highest order value less than current
+    above = Employee.objects.filter(order__lt=emp.order).order_by("-order").first()
+    if above:
+        emp.order, above.order = above.order, emp.order
+        emp.save()
+        above.save()
+    
+    # Return JSON for AJAX requests, otherwise redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': 'Order updated'})
+    return redirect("dashboard")
+
+def move_down(request, employee_id):
+    emp = get_object_or_404(Employee, id=employee_id)
+    below = Employee.objects.filter(order__gt=emp.order).order_by("order").first()
+    if below:
+        emp.order, below.order = below.order, emp.order
+        emp.save()
+        below.save()
+    
+    # Return JSON for AJAX requests, otherwise redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': 'Order updated'})
+    return redirect("dashboard")
+
+
+def toggle_active(request, employee_id):
+    if request.method == "POST":
+        employee = get_object_or_404(Employee, id=employee_id)
+        employee.is_rotation_active = not employee.is_rotation_active
+        employee.save()
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))  # redirect back
+
+
+from django.shortcuts import get_object_or_404, redirect
+from .models import Employee, ScheduleEntry
+
+def update_speech_type(request, employee_id):
+    if request.method == "POST":
+        new_type = request.POST.get("speech_type")
+        employee = get_object_or_404(Employee, id=employee_id)
+
+        # Find the next schedule entry for this employee
+        next_entry = (
+            ScheduleEntry.objects
+            .filter(assigned_employee=employee, date__gte=date.today(), is_cancelled=False)
+            .order_by('date')
+            .first()
+        )
+
+        if next_entry and new_type in dict(ScheduleEntry.SpeechType.choices):
+            next_entry.speech_type = new_type
+            next_entry.save()
+
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
 
 

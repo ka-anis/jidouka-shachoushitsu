@@ -26,5 +26,9 @@ urlpatterns = [
     path("google/callback/", views.google_callback, name="google_callback"),
     path("send-to-calendar/", views.send_to_calendar, name="send_to_calendar"),
     path("google/test-create/", views.test_create_event, name="test_create_event"),
+    path('employee/<int:employee_id>/up/', views.move_up, name='employee-move-up'),
+    path('employee/<int:employee_id>/down/', views.move_down, name='employee-move-down'),
+    path('employee/<int:employee_id>/toggle-active/', views.toggle_active, name='employee-toggle-active'),
+    path('employee/<int:employee_id>/update-speech-type/', views.update_speech_type, name='employee-update-speech-type'),
     
 ]

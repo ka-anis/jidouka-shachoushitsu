@@ -7,6 +7,36 @@
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-gray-900 text-white">
+    <script>
+      async function moveEmployee(e, employeeId, direction) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const endpoint = direction === 'up' 
+          ? `/employee/${employeeId}/up/` 
+          : `/employee/${employeeId}/down/`;
+        
+        try {
+          const response = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Response:', data);
+            // Reload the dashboard data
+            setTimeout(() => location.reload(), 300);
+          } else {
+            console.error('HTTP error, status =', response.status);
+          }
+        } catch (error) {
+          console.error('Fetch Error:', error);
+        }
+      }
+    </script>
     <div class="p-6 min-h-screen">
       <div class="grid grid-cols-12 gap-4">
 
@@ -28,35 +58,54 @@
           </div>
 
           <!-- Content area -->
-          <div class="flex flex-col" style="gap: 0;">
+          <div class="flex flex-col gap-0">
 
-            <!-- TOP ZONE (All employees) -->
+            <!-- TOP ZONE -->
             <div class="bg-green-800/90 border border-gray-700 overflow-hidden">
-              <div class="overflow-y-auto text-sm">
+              <div class="overflow-y-auto max-h-[500px] text-sm">
                 {% for member in top_zone %}
                 <div class="grid gap-0 items-center py-2 px-2 border-b border-gray-700"
                      style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1fr;">
                   <!-- Up / Down arrows -->
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                            {% if forloop.first %}disabled{% endif %}>
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
-                      </svg>
-                    </button>
+                    {% if not forloop.first %}
+                      <button onclick="moveEmployee(event, {{ member.id }}, 'up')" class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+                    {% else %}
+                      <div class="arrow-up text-white opacity-30 cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </div>
+                    {% endif %}
                   </div>
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                            {% if forloop.last %}disabled{% endif %}>
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                      </svg>
-                    </button>
+                    {% if not forloop.last %}
+                      <button onclick="moveEmployee(event, {{ member.id }}, 'down')" class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+                    {% else %}
+                      <div class="arrow-down text-white opacity-30 cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </div>
+                    {% endif %}
                   </div>
 
                   <!-- 状態 checkbox -->
                   <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer" {% if member.is_rotation_active %}checked{% endif %}>
+                    <form method="post" action="{% url 'employee-toggle-active' member.id %}">
+                      {% csrf_token %}
+                      <input type="checkbox" class="w-4 h-4 cursor-pointer" name="is_active"
+                             {% if member.is_rotation_active %}checked{% endif %} 
+                             onchange="this.form.submit()">
+                    </form>
                   </div>
 
                   <!-- Employee data -->
@@ -70,7 +119,6 @@
                     {% endif %}
                   </div>
 
-
                   <div class="text-center text-xs">
                     {% if member.speech_date %}
                       {{ member.speech_date|date:"Y-m-d" }}
@@ -80,10 +128,14 @@
                   </div>
 
                   <div class="flex items-center justify-center py-1">
-                    <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
-                      <option value="３分間">３分間</option>
-                      <option value="業務">業務</option>
-                    </select>
+                    <form method="post" action="{% url 'employee-update-speech-type' member.id %}">
+                      {% csrf_token %}
+                      <select name="speech_type" class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer"
+                              onchange="this.form.submit()">
+                        <option value="BUSINESS" {% if member.speech_type == "BUSINESS" %}selected{% endif %}>業務</option>
+                        <option value="THREE_MIN" {% if member.speech_type == "THREE_MIN" %}selected{% endif %}>３分間</option>
+                      </select>
+                    </form>
                   </div>
 
                   <div class="text-center">{{ member.calendar }}</div>
@@ -92,33 +144,53 @@
               </div>
             </div>
 
-            <!-- BOTTOM ZONE (Members only) -->
+            <!-- BOTTOM ZONE -->
             <div class="bg-[#7a3f2b] border border-gray-700 overflow-hidden mt-4">
-              <div class="overflow-y-auto text-sm">
+              <div class="overflow-y-auto max-h-[500px] text-sm">
                 {% for member in bottom_zone %}
                 <div class="grid gap-0 items-center py-2 px-2 border-b border-gray-700"
                      style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1fr;">
+
                   <!-- Up / Down arrows -->
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                            {% if forloop.first %}disabled{% endif %}>
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
-                      </svg>
-                    </button>
+                    {% if not forloop.first %}
+                      <button onclick="moveEmployee(event, {{ member.id }}, 'up')" class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+                    {% else %}
+                      <div class="arrow-up text-white opacity-30 cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </div>
+                    {% endif %}
                   </div>
                   <div class="flex items-center justify-center py-1">
-                    <button class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                            {% if forloop.last %}disabled{% endif %}>
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                      </svg>
-                    </button>
+                    {% if not forloop.last %}
+                      <button onclick="moveEmployee(event, {{ member.id }}, 'down')" class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </button>
+                    {% else %}
+                      <div class="arrow-down text-white opacity-30 cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                      </div>
+                    {% endif %}
                   </div>
 
                   <!-- 状態 checkbox -->
                   <div class="flex items-center justify-center py-1">
-                    <input type="checkbox" class="w-4 h-4 cursor-pointer" {% if member.is_rotation_active %}checked{% endif %}>
+                    <form method="post" action="{% url 'employee-toggle-active' member.id %}">
+                      {% csrf_token %}
+                      <input type="checkbox" class="w-4 h-4 cursor-pointer" name="is_active"
+                             {% if member.is_rotation_active %}checked{% endif %} 
+                             onchange="this.form.submit()">
+                    </form>
                   </div>
 
                   <!-- Employee data -->
@@ -132,7 +204,6 @@
                     {% endif %}
                   </div>
 
-
                   <div class="text-center text-xs">
                     {% if member.speech_date %}
                       {{ member.speech_date|date:"Y-m-d" }}
@@ -142,10 +213,14 @@
                   </div>
 
                   <div class="flex items-center justify-center py-1">
-                    <select class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer">
-                      <option value="業務">業務</option>
-                      <option value="３分間">３分間</option>
-                    </select>
+                    <form method="post" action="{% url 'employee-update-speech-type' member.id %}">
+                      {% csrf_token %}
+                      <select name="speech_type" class="bg-transparent text-white border border-gray-600 rounded px-2 py-1 text-sm cursor-pointer"
+                              onchange="this.form.submit()">
+                        <option value="BUSINESS" {% if member.speech_type == "BUSINESS" %}selected{% endif %}>業務</option>
+                        <option value="THREE_MIN" {% if member.speech_type == "THREE_MIN" %}selected{% endif %}>３分間</option>
+                      </select>
+                    </form>
                   </div>
 
                   <div class="text-center">{{ member.calendar }}</div>
