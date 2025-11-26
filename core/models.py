@@ -11,6 +11,7 @@ class Employee(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     employee_id = models.CharField(max_length=10, unique=True)
+    order = models.IntegerField(default=0)
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
 

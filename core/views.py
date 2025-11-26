@@ -190,9 +190,7 @@ def test_create_event(request):
         "end":   {"date": "2025-12-02", "timeZone": "GMT+9"},
         "attendees": [
             {"email": "khaled.gad@ejust.edu.eg"},
-            {"email": "k-mahrous@ar-system.co.jp"},
-            # {"email": "m-ogura@ar-system.co.jp"},
-            # {"email": "k-oya@ar-system.co.jp"},
+            # {"email": "k-mahrous@ar-system.co.jp"},
         ],
     }
 
