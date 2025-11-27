@@ -505,12 +505,11 @@ def send_schedule_to_calendar(request, year, month):
                 error_count += 1
                 continue
             
-            # Create event
-            event_title = f"朝礼スピーチ - {entry.assigned_employee.name} ({entry.get_speech_type_display()})"
+            # Create event with just speech type as title
+            event_title = entry.get_speech_type_display()  # Just "業務" or "３分間"
             
             event_data = {
                 "summary": event_title,
-                "description": f"Speech type: {entry.get_speech_type_display()}\nAssigned to: {entry.assigned_employee.name}",
                 "start": {"date": entry.date.isoformat(), "timeZone": "Asia/Tokyo"},
                 "end": {"date": (entry.date + timedelta(days=1)).isoformat(), "timeZone": "Asia/Tokyo"},
                 "attendees": [
@@ -518,8 +517,8 @@ def send_schedule_to_calendar(request, year, month):
                 ],
             }
             
-            # Insert event
-            event = service.events().insert(calendarId="primary", body=event_data).execute()
+            # DON'T FORGET TO CHANGE THE ID WHEN Setting up a new user
+            event = service.events().insert(calendarId="c_d4fadaaa8d92cb15033ceef352f6e8685947cad7f3cb52af359e4a814dccc6da@group.calendar.google.com", body=event_data, sendNotifications=False).execute()
             event_id = event.get('id')
             
             # Save event ID and mark as sent
@@ -579,9 +578,10 @@ def retract_schedule(request, year, month):
     for entry in schedule_entries:
         try:
             if entry.google_event_id:
-                # Delete from Google Calendar
+                # Delete from attendee's calendar (where it was created)
                 service.events().delete(
-                    calendarId="primary",
+                    # DON'T FORGET TO CHANGE THE ID WHEN Setting up a new user  
+                    calendarId="c_d4fadaaa8d92cb15033ceef352f6e8685947cad7f3cb52af359e4a814dccc6da@group.calendar.google.com",
                     eventId=entry.google_event_id
                 ).execute()
                 
