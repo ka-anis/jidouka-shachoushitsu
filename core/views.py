@@ -1,11 +1,16 @@
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib import messages
 from datetime import date, timedelta
-from .models import Employee, ScheduleEntry, Role
+from .models import Employee, ScheduleEntry, Role, SpeechType
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from calendar import monthrange
+import calendar as cal_module
 
 
 # Create your views here.
@@ -230,6 +235,337 @@ def toggle_active(request, employee_id):
         employee.is_rotation_active = not employee.is_rotation_active
         employee.save()
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))  # redirect back
+
+
+# =====================================================
+# STEP 1: Generate Schedule View
+# =====================================================
+def _get_business_days(year, month):
+    """
+    Returns a list of all business days (Monday-Friday) in the given month.
+    """
+    first_day, num_days = monthrange(year, month)
+    business_days = []
+    
+    for day in range(1, num_days + 1):
+        current_date = date(year, month, day)
+        # 0=Monday, 6=Sunday
+        if current_date.weekday() < 5:  # Monday to Friday
+            business_days.append(current_date)
+    
+    return business_days
+
+
+@require_http_methods(["POST"])
+def generate_schedule(request):
+    """
+    Generate schedule entries for a given month.
+    
+    POST parameters: year, month
+    
+    Rules:
+    - First 6 business days: no assignment
+    - Last 5 business days: assigned using order_gyomu (業務スピーチ)
+    - Middle business days: assigned using order (３分間スピーチ)
+    """
+    try:
+        year = int(request.POST.get('year'))
+        month = int(request.POST.get('month'))
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid year or month.")
+        return redirect('dashboard')
+    
+    # Get all business days in the month
+    business_days = _get_business_days(year, month)
+    
+    if len(business_days) == 0:
+        messages.error(request, f"No business days in {year}-{month:02d}.")
+        return redirect('dashboard')
+    
+    # Split into groups
+    first_six = business_days[:6]
+    last_five = business_days[-5:] if len(business_days) >= 5 else []
+    middle_days = business_days[6:-5] if len(business_days) > 11 else []
+    
+    # Get employees ordered for rotation
+    three_min_employees = Employee.objects.filter(is_rotation_active=True).order_by('order', 'id')
+    gyomu_employees = Employee.objects.filter(role=Role.MEMBER, is_rotation_active=True).order_by('order_gyomu', 'id')
+    
+    # Create schedule entries
+    created_count = 0
+    
+    # First 6 business days: no assignment (or skip)
+    for day in first_six:
+        ScheduleEntry.objects.update_or_create(
+            date=day,
+            defaults={
+                'speech_type': SpeechType.THREE_MIN,
+                'assigned_employee': None,
+                'is_cancelled': False,
+                'is_sent': False,
+                'google_event_id': None,
+            }
+        )
+        created_count += 1
+    
+    # Middle business days: assign using order (３分間スピーチ)
+    if three_min_employees.exists():
+        for idx, day in enumerate(middle_days):
+            emp_idx = idx % len(three_min_employees)
+            employee = three_min_employees[emp_idx]
+            ScheduleEntry.objects.update_or_create(
+                date=day,
+                defaults={
+                    'speech_type': SpeechType.THREE_MIN,
+                    'assigned_employee': employee,
+                    'is_cancelled': False,
+                    'is_sent': False,
+                    'google_event_id': None,
+                }
+            )
+            created_count += 1
+    
+    # Last 5 business days: assign using order_gyomu (業務スピーチ)
+    if gyomu_employees.exists():
+        for idx, day in enumerate(last_five):
+            emp_idx = idx % len(gyomu_employees)
+            employee = gyomu_employees[emp_idx]
+            ScheduleEntry.objects.update_or_create(
+                date=day,
+                defaults={
+                    'speech_type': SpeechType.BUSINESS,
+                    'assigned_employee': employee,
+                    'is_cancelled': False,
+                    'is_sent': False,
+                    'google_event_id': None,
+                }
+            )
+            created_count += 1
+    
+    messages.success(request, f"Generated schedule for {year}-{month:02d}. ({created_count} entries)")
+    return redirect('schedule_preview', year=year, month=month)
+
+
+# =====================================================
+# STEP 2: Schedule Preview View
+# =====================================================
+@require_http_methods(["GET"])
+def schedule_preview(request, year, month):
+    """
+    Display the generated schedule for the selected month.
+    
+    GET parameters: year, month
+    """
+    try:
+        year = int(year)
+        month = int(month)
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid year or month.")
+        return redirect('dashboard')
+    
+    # Get all business days for this month
+    business_days = _get_business_days(year, month)
+    
+    # Load schedule entries for this month
+    schedule_entries = ScheduleEntry.objects.filter(
+        date__year=year,
+        date__month=month
+    ).select_related('assigned_employee').order_by('date')
+    
+    # Group by date for display
+    schedule_data = []
+    entry_map = {entry.date: entry for entry in schedule_entries}
+    
+    for day in business_days:
+        entry = entry_map.get(day)
+        schedule_data.append({
+            'date': day,
+            'date_display': day.strftime('%Y-%m-%d'),
+            'day_name': ['月', '火', '水', '木', '金'][day.weekday()],
+            'speech_type': entry.speech_type if entry else None,
+            'speech_type_display': entry.get_speech_type_display() if entry else 'N/A',
+            'assigned_employee': entry.assigned_employee.name if entry and entry.assigned_employee else 'N/A',
+            'is_sent': entry.is_sent if entry else False,
+        })
+    
+    context = {
+        'year': year,
+        'month': month,
+        'month_display': f'{year}-{month:02d}',
+        'schedule_data': schedule_data,
+    }
+    
+    return render(request, 'core/schedule_preview.html', context)
+
+
+# =====================================================
+# STEP 3: Send to Google Calendar View
+# =====================================================
+def _get_google_service(request):
+    """
+    Get Google Calendar service from session credentials.
+    Returns None if not authenticated.
+    """
+    creds_data = request.session.get('google_credentials')
+    if not creds_data:
+        return None
+    
+    try:
+        creds = Credentials(
+            token=creds_data.get("token"),
+            refresh_token=creds_data.get("refresh_token"),
+            token_uri=creds_data.get("token_uri"),
+            client_id=creds_data.get("client_id"),
+            client_secret=creds_data.get("client_secret"),
+            scopes=creds_data.get("scopes")
+        )
+        return build("calendar", "v3", credentials=creds)
+    except Exception as e:
+        return None
+
+
+@require_http_methods(["POST"])
+def send_schedule_to_calendar(request, year, month):
+    """
+    Send all schedule entries for the selected month to Google Calendar.
+    
+    POST parameters: year, month
+    """
+    try:
+        year = int(year)
+        month = int(month)
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid year or month.")
+        return redirect('dashboard')
+    
+    # Check if user is authenticated with Google
+    service = _get_google_service(request)
+    if not service:
+        messages.error(request, "Not authenticated with Google Calendar. Please authenticate first.")
+        return redirect('google_auth')
+    
+    # Load schedule entries for this month
+    schedule_entries = ScheduleEntry.objects.filter(
+        date__year=year,
+        date__month=month,
+        assigned_employee__isnull=False
+    ).select_related('assigned_employee')
+    
+    sent_count = 0
+    error_count = 0
+    
+    for entry in schedule_entries:
+        try:
+            # Validate email
+            if not entry.assigned_employee.email:
+                messages.warning(request, f"{entry.assigned_employee.name} has no email.")
+                error_count += 1
+                continue
+            
+            # Create event
+            event_title = f"朝礼スピーチ - {entry.assigned_employee.name} ({entry.get_speech_type_display()})"
+            
+            event_data = {
+                "summary": event_title,
+                "description": f"Speech type: {entry.get_speech_type_display()}\nAssigned to: {entry.assigned_employee.name}",
+                "start": {"date": entry.date.isoformat(), "timeZone": "Asia/Tokyo"},
+                "end": {"date": (entry.date + timedelta(days=1)).isoformat(), "timeZone": "Asia/Tokyo"},
+                "attendees": [
+                    {"email": entry.assigned_employee.email}
+                ],
+            }
+            
+            # Insert event
+            event = service.events().insert(calendarId="primary", body=event_data).execute()
+            event_id = event.get('id')
+            
+            # Save event ID and mark as sent
+            entry.google_event_id = event_id
+            entry.is_sent = True
+            entry.save()
+            sent_count += 1
+            
+        except HttpError as e:
+            messages.warning(request, f"Failed to create event for {entry.date}: {str(e)}")
+            error_count += 1
+        except Exception as e:
+            messages.warning(request, f"Error for {entry.date}: {str(e)}")
+            error_count += 1
+    
+    messages.success(request, f"Sent {sent_count} events to Google Calendar.")
+    if error_count > 0:
+        messages.warning(request, f"{error_count} events failed to send.")
+    
+    return redirect('schedule_preview', year=year, month=month)
+
+
+# =====================================================
+# STEP 4: Retract (Delete from Google Calendar) View
+# =====================================================
+@require_http_methods(["POST"])
+def retract_schedule(request, year, month):
+    """
+    Delete previously-sent Google Calendar events for the selected month.
+    
+    POST parameters: year, month
+    """
+    try:
+        year = int(year)
+        month = int(month)
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid year or month.")
+        return redirect('dashboard')
+    
+    # Check if user is authenticated with Google
+    service = _get_google_service(request)
+    if not service:
+        messages.error(request, "Not authenticated with Google Calendar. Please authenticate first.")
+        return redirect('google_auth')
+    
+    # Load schedule entries for this month that have been sent
+    schedule_entries = ScheduleEntry.objects.filter(
+        date__year=year,
+        date__month=month,
+        is_sent=True,
+        google_event_id__isnull=False
+    )
+    
+    deleted_count = 0
+    error_count = 0
+    
+    for entry in schedule_entries:
+        try:
+            if entry.google_event_id:
+                # Delete from Google Calendar
+                service.events().delete(
+                    calendarId="primary",
+                    eventId=entry.google_event_id
+                ).execute()
+                
+                # Clear event ID and mark as not sent
+                entry.google_event_id = None
+                entry.is_sent = False
+                entry.save()
+                deleted_count += 1
+        except HttpError as e:
+            if e.resp.status == 404:
+                # Event already deleted on Google side, just clear locally
+                entry.google_event_id = None
+                entry.is_sent = False
+                entry.save()
+                deleted_count += 1
+            else:
+                messages.warning(request, f"Failed to delete event for {entry.date}: {str(e)}")
+                error_count += 1
+        except Exception as e:
+            messages.warning(request, f"Error for {entry.date}: {str(e)}")
+            error_count += 1
+    
+    messages.success(request, f"Retracted {deleted_count} events from Google Calendar.")
+    if error_count > 0:
+        messages.warning(request, f"{error_count} events failed to retract.")
+    
+    return redirect('schedule_preview', year=year, month=month)
 
 
 

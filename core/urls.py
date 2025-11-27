@@ -31,4 +31,9 @@ urlpatterns = [
     path('employee/<int:employee_id>/down-gyomu/', views.move_down_gyomu, name='employee-move-down-gyomu'),
     path('employee/<int:employee_id>/toggle-active/', views.toggle_active, name='employee-toggle-active'),
     
+    # Schedule management URLs
+    path('schedule/generate/', views.generate_schedule, name='generate_schedule'),
+    path('schedule/preview/<int:year>/<int:month>/', views.schedule_preview, name='schedule_preview'),
+    path('schedule/send/<int:year>/<int:month>/', views.send_schedule_to_calendar, name='send_to_calendar_month'),
+    path('schedule/retract/<int:year>/<int:month>/', views.retract_schedule, name='retract_schedule'),
 ]

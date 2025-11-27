@@ -63,6 +63,8 @@ class ScheduleEntry(models.Model):
         Employee, null=True, blank=True, on_delete=models.SET_NULL
     )
     is_cancelled = models.BooleanField(default=False)
+    google_event_id = models.CharField(max_length=200, blank=True, null=True)
+    is_sent = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['date']

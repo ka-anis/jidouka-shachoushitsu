@@ -13,8 +13,13 @@ Database　（DB関連）:
 backend API （バックエンドAPI関連）:
     - Design API
     - function endpoint split for each service
+    - implement businees logic for calculating which days are available for scheduling speeches
+        - use the order field to produce events in order
 
 Testing（テスト関連）:
 
     -  integration test for each service
     -  e2e test for overall system 
+
+
+- 
