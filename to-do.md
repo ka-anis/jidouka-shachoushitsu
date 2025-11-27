@@ -22,4 +22,12 @@ Testing（テスト関連）:
     -  e2e test for overall system 
 
 
+
+
+- translation of schedule preview page to Japanese
+- Make the design more modern
+- add a user logo to the footer
+- Choose the colors
+- Find a good font
+- How to make it deployable
 - 

@@ -50,38 +50,6 @@ def dashboard_view(request):
     return render(request, "core/dashboard.html", context) 
 
 
-
-
- 
-
-
-def mc_schedule_view(request):
-    """Display MC schedule from the database."""
-    
-    schedule_entries = ScheduleEntry.objects.select_related('assigned_employee').order_by('date')
-    
-    mc_employees = Employee.objects.filter(is_rotation_active=True) 
-
-    green_shades = ["bg-green-900", "bg-green-800", "bg-green-700", "bg-green-600", "bg-green-500"]
-
-    schedule_data = []
-    for i, entry in enumerate(schedule_entries):
-        schedule_data.append({
-            "date_display": entry.date.strftime("%m/%d"),
-            "member": entry.assigned_employee.name if entry.assigned_employee else "N/A",
-            "mc": "", 
-            "role": entry.assigned_employee.get_role_display() if entry.assigned_employee else "",
-            "color_class": "bg-teal-900", # Default color
-            "mc_color_class": green_shades[i % len(green_shades)],
-        })
-
-    context = {
-        "schedule_data": schedule_data,
-        "mc_names": [e.name for e in mc_employees],
-    }
-
-    return render(request, "core/mc_schedule.html", context)
-
 # =====================================================
 # Redirect helpers for dashboard buttons
 # =====================================================
@@ -430,7 +398,7 @@ def schedule_preview(request, year, month):
             'assigned_employee': entry.assigned_employee.name if entry and entry.assigned_employee else 'N/A',
             'is_sent': entry.is_sent if entry else False,
         })
-    
+    schedule_data = schedule_data[6:]
     context = {
         'year': year,
         'month': month,

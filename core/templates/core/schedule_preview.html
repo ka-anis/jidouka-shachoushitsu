@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schedule Preview - {{ month_display }}</title>
+    <title>確認画面 - {{ month_display }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
@@ -11,7 +11,7 @@
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
             <div class="mb-8">
-                <h1 class="text-4xl font-bold text-gray-800 mb-2">Schedule Preview</h1>
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">確認してください</h1>
                 <p class="text-lg text-gray-600">{{ month_display }}</p>
             </div>
 
@@ -101,14 +101,14 @@
                 <form method="POST" action="{% url 'send_to_calendar_month' year month %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded">
-                        📤 Send to Google Calendar
+                    Send to Google Calendar
                     </button>
                 </form>
 
                 <form method="POST" action="{% url 'retract_schedule' year month %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded" onclick="return confirm('Are you sure you want to retract all sent events?');">
-                        🔙 Retract (リトラクト)
+                    Retract (リトラクト)
                     </button>
                 </form>
             </div>

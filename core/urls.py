@@ -20,7 +20,6 @@ from . import views
 urlpatterns = [
     path("", views.home , name="home"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
-    path("mc-schedule/", views.mc_schedule_view, name="mc_schedule"),
     path("google/auth/", views.google_auth, name="google_auth"),
     path("google/callback/", views.google_callback, name="google_callback"),
     path("google/test-create/", views.test_create_event, name="test_create_event"),
