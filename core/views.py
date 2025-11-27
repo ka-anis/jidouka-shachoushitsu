@@ -8,6 +8,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
+
 # Create your views here.
 def home(request):
     return render(request, "core/home.html", {"message": "Welcome to the Core Home Page!"})
@@ -71,6 +72,11 @@ def mc_schedule_view(request):
     }
 
     return render(request, "core/mc_schedule.html", context)
+
+def send_to_calendar(request):
+    return render(request, "core/send_to_calendar.html")
+
+
 
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # allow HTTP for local dev
