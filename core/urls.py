@@ -28,6 +28,8 @@ urlpatterns = [
     path("google/test-create/", views.test_create_event, name="test_create_event"),
     path('employee/<int:employee_id>/up/', views.move_up, name='employee-move-up'),
     path('employee/<int:employee_id>/down/', views.move_down, name='employee-move-down'),
+    path('employee/<int:employee_id>/up-gyomu/', views.move_up_gyomu, name='employee-move-up-gyomu'),
+    path('employee/<int:employee_id>/down-gyomu/', views.move_down_gyomu, name='employee-move-down-gyomu'),
     path('employee/<int:employee_id>/toggle-active/', views.toggle_active, name='employee-toggle-active'),
     path('employee/<int:employee_id>/update-speech-type/', views.update_speech_type, name='employee-update-speech-type'),
     

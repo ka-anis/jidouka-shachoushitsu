@@ -14,16 +14,21 @@ def home(request):
 
 
 def dashboard_view(request):
+    # Top zone: order by `order` (3分間スピーチ ordering)
     all_employees = Employee.objects.all().order_by("order", "id")
-    member_employees = Employee.objects.filter(role=Role.MEMBER).order_by("order", "id")
+    # Bottom zone: order by `order_gyomu` (業務スピーチ ordering)
+    member_employees = Employee.objects.filter(role=Role.MEMBER).order_by("order_gyomu", "id")
 
     def build_entry(emp):
         return {
             "id": emp.id,
             "name": emp.name,
             "is_rotation_active": emp.is_rotation_active,  # <-- correct
+            "order": getattr(emp, 'order', None),
+            "order_gyomu": getattr(emp, 'order_gyomu', None),
             "days_passed": emp.days_since_last_speech(),
             "speech_date": emp.next_speech_date(),
+            "speech_type": None,
             "calendar": "",
         }
 
@@ -32,36 +37,29 @@ def dashboard_view(request):
         "bottom_zone": [build_entry(e) for e in member_employees],
     }
 
-    return render(request, "core/dashboard.html", context)
+    return render(request, "core/dashboard.html", context) 
 
 
 
 
-
+ 
 
 
 def mc_schedule_view(request):
     """Display MC schedule from the database."""
-    # Fetch schedule entries from the database
+    
     schedule_entries = ScheduleEntry.objects.select_related('assigned_employee').order_by('date')
     
-    # The MC is not explicitly modeled yet. For now, we can get a distinct list of employees.
-    # This part will need to be updated once the "MC" role is clearly defined in the models.
-    mc_employees = Employee.objects.filter(is_rotation_active=True) # Assuming MCs are active in rotation
+    mc_employees = Employee.objects.filter(is_rotation_active=True) 
 
-    # Green shades for MC column (5 shades matching 5 MC people, from dark to light)
-    # Match dashboard green shades
     green_shades = ["bg-green-900", "bg-green-800", "bg-green-700", "bg-green-600", "bg-green-500"]
 
-    # The complex color and role logic was tied to the static data.
-    # We now pass the real data and can handle presentation logic in the template.
-    # A simplified structure is created here.
     schedule_data = []
     for i, entry in enumerate(schedule_entries):
         schedule_data.append({
             "date_display": entry.date.strftime("%m/%d"),
             "member": entry.assigned_employee.name if entry.assigned_employee else "N/A",
-            "mc": "", # MC logic needs to be defined based on your business rules
+            "mc": "", 
             "role": entry.assigned_employee.get_role_display() if entry.assigned_employee else "",
             "color_class": "bg-teal-900", # Default color
             "mc_color_class": green_shades[i % len(green_shades)],
@@ -73,36 +71,6 @@ def mc_schedule_view(request):
     }
 
     return render(request, "core/mc_schedule.html", context)
-
-
-def download_mc_schedule_csv(request):
-    """Download MC schedule from database as a CSV file"""
-    schedule_entries = ScheduleEntry.objects.select_related('assigned_employee').order_by('date')
-
-    # Create CSV response
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = 'attachment; filename="mc_schedule.csv"'
-
-    # Write BOM for Excel UTF-8 support
-    response.write('\ufeff')
-
-    writer = csv.writer(response)
-    writer.writerow(['日付', 'メンバー', 'MC'])
-
-    for entry in schedule_entries:
-        writer.writerow([
-            entry.date.strftime("%Y-%m-%d"),
-            entry.assigned_employee.name if entry.assigned_employee else "N/A",
-            "" # MC logic needs to be defined
-        ])
-
-    return response
-
-def send_to_calendar(request):
-    # As a demo I need this function  to send a google calendar even to a single user. 
-    return HttpResponse("Sent to Google Calendar!")
-
-
 
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # allow HTTP for local dev
@@ -226,6 +194,31 @@ def move_down(request, employee_id):
     return redirect("dashboard")
 
 
+def move_up_gyomu(request, employee_id):
+    emp = get_object_or_404(Employee, id=employee_id)
+    # Find employee with the highest order_gyomu value less than current
+    above = Employee.objects.filter(order_gyomu__lt=emp.order_gyomu).order_by("-order_gyomu").first()
+    if above:
+        emp.order_gyomu, above.order_gyomu = above.order_gyomu, emp.order_gyomu
+        emp.save()
+        above.save()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': 'Order updated'})
+    return redirect("dashboard")
+
+
+def move_down_gyomu(request, employee_id):
+    emp = get_object_or_404(Employee, id=employee_id)
+    below = Employee.objects.filter(order_gyomu__gt=emp.order_gyomu).order_by("order_gyomu").first()
+    if below:
+        emp.order_gyomu, below.order_gyomu = below.order_gyomu, emp.order_gyomu
+        emp.save()
+        below.save()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': 'Order updated'})
+    return redirect("dashboard")
+
+
 def toggle_active(request, employee_id):
     if request.method == "POST":
         employee = get_object_or_404(Employee, id=employee_id)
@@ -234,8 +227,6 @@ def toggle_active(request, employee_id):
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))  # redirect back
 
 
-from django.shortcuts import get_object_or_404, redirect
-from .models import Employee, ScheduleEntry
 
 def update_speech_type(request, employee_id):
     if request.method == "POST":
