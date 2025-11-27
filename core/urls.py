@@ -30,6 +30,5 @@ urlpatterns = [
     path('employee/<int:employee_id>/up-gyomu/', views.move_up_gyomu, name='employee-move-up-gyomu'),
     path('employee/<int:employee_id>/down-gyomu/', views.move_down_gyomu, name='employee-move-down-gyomu'),
     path('employee/<int:employee_id>/toggle-active/', views.toggle_active, name='employee-toggle-active'),
-    path('employee/<int:employee_id>/update-speech-type/', views.update_speech_type, name='employee-update-speech-type'),
     
 ]

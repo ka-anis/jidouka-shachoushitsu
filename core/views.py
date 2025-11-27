@@ -1,7 +1,6 @@
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
-import csv
 from datetime import date, timedelta
 from .models import Employee, ScheduleEntry, Role
 from google_auth_oauthlib.flow import Flow
@@ -234,23 +233,6 @@ def toggle_active(request, employee_id):
 
 
 
-def update_speech_type(request, employee_id):
-    if request.method == "POST":
-        new_type = request.POST.get("speech_type")
-        employee = get_object_or_404(Employee, id=employee_id)
 
-        # Find the next schedule entry for this employee
-        next_entry = (
-            ScheduleEntry.objects
-            .filter(assigned_employee=employee, date__gte=date.today(), is_cancelled=False)
-            .order_by('date')
-            .first()
-        )
-
-        if next_entry and new_type in dict(ScheduleEntry.SpeechType.choices):
-            next_entry.speech_type = new_type
-            next_entry.save()
-
-    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
 
 
