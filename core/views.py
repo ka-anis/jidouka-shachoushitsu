@@ -2,6 +2,7 @@ import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from datetime import date, timedelta
 from .models import Employee, ScheduleEntry, Role, SpeechType
@@ -37,9 +38,13 @@ def dashboard_view(request):
             "calendar": "",
         }
 
+    # Check if user is authenticated with Google
+    google_authenticated = "google_credentials" in request.session
+
     context = {
         "top_zone": [build_entry(e) for e in all_employees],
         "bottom_zone": [build_entry(e) for e in member_employees],
+        "google_authenticated": google_authenticated,
     }
 
     return render(request, "core/dashboard.html", context) 
@@ -77,8 +82,29 @@ def mc_schedule_view(request):
 
     return render(request, "core/mc_schedule.html", context)
 
-def send_to_calendar(request):
-    return render(request, "core/send_to_calendar.html")
+# =====================================================
+# Redirect helpers for dashboard buttons
+# =====================================================
+def send_to_calendar_redirect(request):
+    """
+    Redirect from dashboard 送信 button to current month's send view.
+    Determines current month and redirects to schedule send endpoint.
+    """
+    today = date.today()
+    year = today.year
+    month = today.month
+    return redirect('send_to_calendar_month', year=year, month=month)
+
+
+def retract_schedule_redirect(request):
+    """
+    Redirect from dashboard リトラクト button to current month's retract view.
+    Determines current month and redirects to schedule retract endpoint.
+    """
+    today = date.today()
+    year = today.year
+    month = today.month
+    return redirect('retract_schedule', year=year, month=month)
 
 
 
@@ -101,12 +127,14 @@ def google_auth(request):
     )
 
     authorization_url, state = flow.authorization_url(
-        access_type='offline',            # IMPORTANT: gives long-lasting refresh token
+        access_type='offline',
         include_granted_scopes='true',
-        prompt='consent'                  # forces Google to show the screen every time
+        prompt='consent'
     )
 
-    request.session['state'] = state
+    # Store state in session - CRITICAL for CSRF protection
+    request.session['oauth_state'] = state
+    request.session.save()  # Explicitly save the session
 
     return redirect(authorization_url)
 
@@ -114,9 +142,14 @@ def google_auth(request):
 # ---------------------------------------------------
 # 2) Google redirects HERE after you click Allow
 # ---------------------------------------------------
+@csrf_exempt
 def google_callback(request):
-
-    state = request.session['state']
+    # Retrieve the state we saved in google_auth
+    state = request.session.get('oauth_state')
+    
+    if not state:
+        messages.error(request, "Session expired. Please try authenticating again.")
+        return redirect('google_auth')
 
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
@@ -125,7 +158,11 @@ def google_callback(request):
         state=state,
     )
 
-    flow.fetch_token(authorization_response=request.build_absolute_uri())
+    try:
+        flow.fetch_token(authorization_response=request.build_absolute_uri())
+    except Exception as e:
+        messages.error(request, f"Failed to authenticate with Google: {str(e)}")
+        return redirect('google_auth')
 
     creds = flow.credentials
 
@@ -138,8 +175,14 @@ def google_callback(request):
         "token_uri": creds.token_uri,
         "scopes": creds.scopes,
     }
+    
+    # Clean up state from session
+    if 'oauth_state' in request.session:
+        del request.session['oauth_state']
+    request.session.save()
 
-    return HttpResponse("Authentication successful. You are now connected to Google Calendar.")
+    messages.success(request, "Google Calendar authentication successful!")
+    return redirect('dashboard')
 
 
 
@@ -424,7 +467,7 @@ def _get_google_service(request):
         return None
 
 
-@require_http_methods(["POST"])
+@require_http_methods(["GET","POST"])
 def send_schedule_to_calendar(request, year, month):
     """
     Send all schedule entries for the selected month to Google Calendar.

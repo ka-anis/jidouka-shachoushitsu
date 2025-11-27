@@ -255,7 +255,7 @@
              Control Panel (Full width)
         ====================================== -->
         <div class="bg-black p-6 rounded">
-          <div class="flex flex-row gap-4 justify-center items-center">
+          <div class="flex flex-row gap-4 justify-center items-center flex-wrap">
             <div class="border border-white text-white rounded p-4 text-center min-w-[150px]">ユーザー</div>
 
             <button class="py-2 px-6 border border-white text-white rounded hover:bg-white hover:text-black transition">
@@ -266,15 +266,37 @@
               メンバーを排除
             </button>
 
-            <a href="{% url 'send_to_calendar' %}"
-               class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition">
-              送信
+            <!-- Generate Schedule for Current Month -->
+            {% now "Y" as cur_year %}
+            {% now "n" as cur_month %}
+            <form method="post" action="{% url 'generate_schedule' %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="year" value="{{ cur_year }}">
+              <input type="hidden" name="month" value="{{ cur_month }}">
+              <button type="submit" class="py-2 px-6 border border-blue-500 text-blue-500 rounded text-center hover:bg-blue-500 hover:text-black transition">
+                📅 スケジュール生成
+              </button>
+            </form>
+
+            {% if google_authenticated %}
+            <form method="post" action="{% url 'send_to_calendar_month' cur_year cur_month %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition">
+                送信
+              </button>
+            </form>
+            {% else %}
+            <a href="{% url 'google_auth' %}" class="py-2 px-6 border border-orange-500 text-orange-500 rounded text-center hover:bg-orange-500 hover:text-black transition">
+              ✓ Google認証
             </a>
+            {% endif %}
 
-            <button class="py-2 px-6 border border-white text-white rounded hover:bg-white hover:text-black transition">
-              リトラクト
-            </button>
-
+            <form method="post" action="{% url 'retract_schedule' cur_year cur_month %}" style="display:inline; margin-left:0;">
+              {% csrf_token %}
+              <button type="submit" class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition" onclick="return confirm('Are you sure you want to retract all sent events for this month?');">
+                リトラクト
+              </button>
+            </form>
             <a href="{% url 'mc_schedule' %}"
                class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition">
               確認画面へ
