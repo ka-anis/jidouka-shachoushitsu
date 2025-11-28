@@ -502,7 +502,7 @@ def send_schedule_to_calendar(request, year, month):
             messages.warning(request, f"Error for {entry.date}: {str(e)}")
             error_count += 1
     
-    messages.success(request, f"Sent {sent_count} events to Google Calendar.")
+    messages.success(request, f" {sent_count}件　登録完了")
     if error_count > 0:
         messages.warning(request, f"{error_count} events failed to send.")
     
@@ -572,7 +572,7 @@ def retract_schedule(request, year, month):
             messages.warning(request, f"Error for {entry.date}: {str(e)}")
             error_count += 1
     
-    messages.success(request, f"Retracted {deleted_count} events from Google Calendar.")
+    messages.success(request, f"{deleted_count}件　　削除完了")
     if error_count > 0:
         messages.warning(request, f"{error_count} events failed to retract.")
     

@@ -58,15 +58,17 @@
 
             <!-- Header row -->
             <div class="grid gap-0 bg-amber-900 border border-gray-700 text-sm font-semibold"
-                 style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr;">
+                 style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1fr;">
               <div class="py-2 px-2 text-center border-r border-gray-700"></div>
               <div class="py-2 px-2 text-center border-r border-gray-700"></div>
               <div class="py-2 px-2 text-center border-r border-gray-700">状態</div>
               <div class="py-2 px-2 text-center border-r border-gray-700">順番</div>
-              <div class="py-2 px-2 border-r border-gray-700">名</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">氏名</div>
               <div class="py-2 px-2 text-center border-r border-gray-700">経過日数</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">スピーチ日時</div>
-              <div class="py-2 px-2 text-center">今のカレンダー</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">登録中の日付</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">今月</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">行いました</div>
+              <div class="py-2 px-2 text-center border-r border-gray-300">来月</div>
             </div>
 
             <!-- LEFT CONTENT -->
@@ -157,15 +159,17 @@
 
             <!-- Header row -->
             <div class="grid gap-0 bg-green-900 border border-gray-700 text-sm font-semibold"
-                 style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr;">
+                 style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1.5fr;">
               <div class="py-2 px-2 text-center border-r border-gray-700"></div>
               <div class="py-2 px-2 text-center border-r border-gray-700"></div>
               <div class="py-2 px-2 text-center border-r border-gray-700">状態</div>
               <div class="py-2 px-2 text-center border-r border-gray-700">順番</div>
-              <div class="py-2 px-2 border-r border-gray-700">名</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">氏名</div>
               <div class="py-2 px-2 text-center border-r border-gray-700">経過日数</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">スピーチ日時</div>
-              <div class="py-2 px-2 text-center">今のカレンダー</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">登録中の日付</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">今月</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">行いました</div>
+              <div class="py-2 px-2 text-center border-r border-gray-700">来月</div>
             </div>
 
             <!-- RIGHT CONTENT -->
@@ -262,7 +266,7 @@
             </button>
 
             <button class="py-2 px-6 border border-white text-white rounded hover:bg-white hover:text-black transition">
-              メンバーを排除
+              メンバーを削除
             </button>
 
             <!-- Generate Schedule for Current Month -->
@@ -279,7 +283,7 @@
 
             <!-- View Preview Screen -->
             <a href="{% url 'schedule_preview' cur_year cur_month %}" class="py-2 px-6 border rounded text-center hover:bg-purple-500 hover:text-black transition">
-            確認
+            確認画面へ
             </a>
 
             {% if google_authenticated %}
@@ -297,8 +301,8 @@
 
             <form method="post" action="{% url 'retract_schedule' cur_year cur_month %}" style="display:inline; margin-left:0;">
               {% csrf_token %}
-              <button type="submit" class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition" onclick="return confirm('Are you sure you want to retract all sent events for this month?');">
-                リトラクト
+              <button type="submit" class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition" onclick="return confirm('今月の登録日付を削除してよろしいですか？');">
+                登録日付の削除
               </button>
             </form>
           </div>
