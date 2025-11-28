@@ -1,314 +1,251 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .table-header {
+      @apply text-xs font-semibold uppercase tracking-wider bg-gray-800/70 text-gray-200;
+    }
+    .card {
+      @apply bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden;
+    }
+    .card-header {
+      @apply px-4 py-3 text-sm font-bold bg-gray-900 border-b border-gray-700;
+    }
+    .control-btn {
+      @apply px-5 py-2 rounded-lg border text-sm font-semibold 
+             transition hover:-translate-y-0.5 hover:shadow;
+    }
+    .move-btn svg { @apply w-4 h-4; }
+  </style>
 
-  <body class="bg-gray-900 text-white">
-    <script>
-      async function moveEmployee(e, employeeId, direction, zone) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        let endpoint;
-        if (zone === 'gyomu') {
-          endpoint = direction === 'up'
-            ? `/employee/${employeeId}/up-gyomu/`
-            : `/employee/${employeeId}/down-gyomu/`;
-        } else {
-          endpoint = direction === 'up'
-            ? `/employee/${employeeId}/up/`
-            : `/employee/${employeeId}/down/`;
-        }
-        
-        try {
-          const response = await fetch(endpoint, {
-            method: 'GET',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Response:', data);
-            setTimeout(() => location.reload(), 300);
-          } else {
-            console.error('HTTP error, status =', response.status);
-          }
-        } catch (error) {
-          console.error('Fetch Error:', error);
-        }
+  <script>
+    async function moveEmployee(e, employeeId, direction, zone) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      let endpoint;
+      if (zone === 'gyomu') {
+        endpoint = direction === 'up'
+          ? `/employee/${employeeId}/up-gyomu/`
+          : `/employee/${employeeId}/down-gyomu/`;
+      } else {
+        endpoint = direction === 'up'
+          ? `/employee/${employeeId}/up/`
+          : `/employee/${employeeId}/down/`;
       }
-    </script>
 
-    <div class="p-6 min-h-screen">
-      <div class="flex flex-col gap-4">
+      try {
+        const res = await fetch(endpoint, { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (res.ok) setTimeout(() => location.reload(), 300);
+      } catch (err) { console.error(err); }
+    }
+  </script>
+</head>
 
-        <!-- =====================================
-             LEFT & RIGHT ZONES (SIDE BY SIDE)
-        ====================================== -->
-        <div class="grid grid-cols-2 gap-4">
+<body class="bg-gray-900 text-gray-100">
 
-          <!-- =====================================
-               LEFT ZONE: 業務スピーチ
-          ====================================== -->
-          <div class="flex flex-col">
+<div class="p-6 min-h-screen space-y-6">
 
-            <!-- Header row -->
-            <div class="grid gap-0 bg-amber-900 border border-gray-700 text-sm font-semibold"
-                 style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1fr;">
-              <div class="py-2 px-2 text-center border-r border-gray-700"></div>
-              <div class="py-2 px-2 text-center border-r border-gray-700"></div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">状態</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">順番</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">氏名</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">経過日数</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">登録中の日付</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">今月</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">行いました</div>
-              <div class="py-2 px-2 text-center border-r border-gray-300">来月</div>
-            </div>
+  <!-- =======================
+       TWO MAIN SPEECH ZONES
+  ======================== -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <!-- LEFT CONTENT -->
-            <div class="bg-[#7a3f2b] border border-gray-700 overflow-hidden">
-              <div class="bg-amber-900 py-2 px-4 text-sm font-semibold border-b border-gray-700">
-                業務スピーチ
-              </div>
+    <!-- =====================================
+         LEFT ZONE: 業務スピーチ
+    ====================================== -->
+    <div class="card">
+      <div class="card-header bg-amber-800 text-white">業務スピーチ</div>
 
-              <div class="overflow-y-auto max-h-[500px] text-sm">
-                {% for member in bottom_zone %}
-                <div class="grid gap-0 items-center py-2 px-2 border-b border-gray-700"
-                     style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr;">
+      <!-- Header row -->
+      <div class="grid table-header px-2 py-2 border-b border-gray-700"
+           style="grid-template-columns: 40px 40px 40px 60px 1fr 90px 130px 90px;">
+        <div></div>
+        <div></div>
+        <div class="text-center">状態</div>
+        <div class="text-center">順番</div>
+        <div>氏名</div>
+        <div class="text-center">経過日数</div>
+        <div class="text-center">登録日</div>
+        <div class="text-center">今月</div>
+      </div>
 
-                  <!-- Up -->
-                  <div class="flex items-center justify-center py-1">
-                    {% if not forloop.first %}
-                    <button onclick="moveEmployee(event, {{ member.id }}, 'up', 'gyomu')"
-                            class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                              clip-rule="evenodd" />
-                      </svg>
-                    </button>
-                    {% else %}
-                    <div class="opacity-30 cursor-not-allowed"><svg class="w-4 h-4" fill="currentColor"
-                        viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                              clip-rule="evenodd" />
-                      </svg></div>
-                    {% endif %}
-                  </div>
-
-                  <!-- Down -->
-                  <div class="flex items-center justify-center py-1">
-                    {% if not forloop.last %}
-                    <button onclick="moveEmployee(event, {{ member.id }}, 'down', 'gyomu')"
-                            class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                              clip-rule="evenodd" />
-                      </svg>
-                    </button>
-                    {% else %}
-                    <div class="opacity-30 cursor-not-allowed"><svg class="w-4 h-4" fill="currentColor"
-                        viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                              clip-rule="evenodd" />
-                      </svg></div>
-                    {% endif %}
-                  </div>
-
-                  <!-- checkbox -->
-                  <div class="flex items-center justify-center py-1">
-                    <form method="post" action="{% url 'employee-toggle-active' member.id %}">
-                      {% csrf_token %}
-                      <input type="checkbox" name="is_active" class="w-4 h-4 cursor-pointer"
-                        {% if member.is_rotation_active %}checked{% endif %}
-                        onchange="this.form.submit()">
-                    </form>
-                  </div>
-
-                  <!-- data -->
-                  <div class="text-center">{{ member.order_gyomu }}</div>
-                  <div>{{ member.name }}</div>
-                  <div class="text-center">{{ member.days_passed|default:"-" }}</div>
-                  <div class="text-center text-xs">
-                    {{ member.speech_date|date:"Y-m-d"|default:"-" }}
-                  </div>
-                  <div class="text-center">{{ member.calendar }}</div>
-
-                </div>
-                {% endfor %}
-              </div>
-            </div>
-
-          </div>
-          <!-- END LEFT ZONE -->
-
-
-          <!-- =====================================
-               RIGHT ZONE: ３分間スピーチ
-          ====================================== -->
-          <div class="flex flex-col">
-
-            <!-- Header row -->
-            <div class="grid gap-0 bg-green-900 border border-gray-700 text-sm font-semibold"
-                 style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1.5fr;">
-              <div class="py-2 px-2 text-center border-r border-gray-700"></div>
-              <div class="py-2 px-2 text-center border-r border-gray-700"></div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">状態</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">順番</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">氏名</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">経過日数</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">登録中の日付</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">今月</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">行いました</div>
-              <div class="py-2 px-2 text-center border-r border-gray-700">来月</div>
-            </div>
-
-            <!-- RIGHT CONTENT -->
-            <div class="bg-green-800/90 border border-gray-700 overflow-hidden">
-              <div class="bg-green-900 py-2 px-4 text-sm font-semibold border-b border-gray-700">
-                ３分間スピーチ
-              </div>
-
-              <div class="overflow-y-auto max-h-[500px] text-sm">
-                {% for member in top_zone %}
-                <div class="grid gap-0 items-center py-2 px-2 border-b border-gray-700"
-                     style="grid-template-columns: 48px 48px 48px 1fr 1.5fr 1fr 1.5fr 1fr;">
-
-                  <!-- Up -->
-                  <div class="flex items-center justify-center py-1">
-                    {% if not forloop.first %}
-                    <button onclick="moveEmployee(event, {{ member.id }}, 'up', '3min')"
-                            class="arrow-up text-white hover:text-yellow-300 transition cursor-pointer">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                              clip-rule="evenodd" />
-                      </svg>
-                    </button>
-                    {% else %}
-                    <div class="opacity-30 cursor-not-allowed"><svg class="w-4 h-4" fill="currentColor"
-                        viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                              clip-rule="evenodd" />
-                      </svg></div>
-                    {% endif %}
-                  </div>
-
-                  <!-- Down -->
-                  <div class="flex items-center justify-center py-1">
-                    {% if not forloop.last %}
-                    <button onclick="moveEmployee(event, {{ member.id }}, 'down', '3min')"
-                            class="arrow-down text-white hover:text-yellow-300 transition cursor-pointer">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                              clip-rule="evenodd" />
-                      </svg>
-                    </button>
-                    {% else %}
-                    <div class="opacity-30 cursor-not-allowed"><svg class="w-4 h-4" fill="currentColor"
-                        viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                              clip-rule="evenodd" />
-                      </svg></div>
-                    {% endif %}
-                  </div>
-
-                  <!-- checkbox -->
-                  <div class="flex items-center justify-center py-1">
-                    <form method="post" action="{% url 'employee-toggle-active' member.id %}">
-                      {% csrf_token %}
-                      <input type="checkbox" name="is_active" class="w-4 h-4 cursor-pointer"
-                        {% if member.is_rotation_active %}checked{% endif %}
-                        onchange="this.form.submit()">
-                    </form>
-                  </div>
-
-                  <!-- data -->
-                  <div class="text-center">{{ member.order }}</div>
-                  <div>{{ member.name }}</div>
-                  <div class="text-center">{{ member.days_passed|default:"-" }}</div>
-                  <div class="text-center text-xs">
-                    {{ member.speech_date|date:"Y-m-d"|default:"-" }}
-                  </div>
-                  <div class="text-center">{{ member.calendar }}</div>
-
-                </div>
-                {% endfor %}
-              </div>
-            </div>
-
-          </div>
-          <!-- END RIGHT ZONE -->
-
-        </div>
-        <!-- END GRID (fixed!) -->
-
-        <!-- =====================================
-             Control Panel (Full width)
-        ====================================== -->
-        <div class="bg-black p-6 rounded">
-          <div class="flex flex-row gap-4 justify-center items-center flex-wrap">
-
-            <button class="py-2 px-6 border border-white text-white rounded hover:bg-white hover:text-black transition">
-              メンバーを追加
+      <div class="max-h-[500px] overflow-y-auto text-sm">
+        {% for member in bottom_zone %}
+        <div class="grid items-center px-2 py-2 border-b border-gray-700 hover:bg-gray-700/40 transition"
+             style="grid-template-columns: 40px 40px 40px 60px 1fr 90px 130px 90px">
+          
+          <!-- Up -->
+          <div class="flex justify-center">
+            {% if not forloop.first %}
+            <button onclick="moveEmployee(event, {{ member.id }}, 'up', 'gyomu')" class="move-btn hover:text-yellow-300">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.7 12.7a1 1 0 01-1.4 0L10 9.4l-3.3 3.3a1 1 0 01-1.4-1.4l4-4a1 1 0 011.4 0l4 4a1 1 0 010 1.4z"/></svg>
             </button>
-
-            <button class="py-2 px-6 border border-white text-white rounded hover:bg-white hover:text-black transition">
-              メンバーを削除
-            </button>
-
-            <!-- Generate Schedule for Current Month -->
-            {% now "Y" as cur_year %}
-            {% now "n" as cur_month %}
-            <form method="post" action="{% url 'generate_schedule' %}" style="display:inline;">
-              {% csrf_token %}
-              <input type="hidden" name="year" value="{{ cur_year }}">
-              <input type="hidden" name="month" value="{{ cur_month }}">
-              <button type="submit" class="py-2 px-6 border  rounded text-center hover:bg-blue-500 hover:text-black transition">
-              スケジュール生成
-              </button>
-            </form>
-
-            <!-- View Preview Screen -->
-            <a href="{% url 'schedule_preview' cur_year cur_month %}" class="py-2 px-6 border rounded text-center hover:bg-purple-500 hover:text-black transition">
-            確認画面へ
-            </a>
-
-            {% if google_authenticated %}
-            <form method="post" action="{% url 'send_to_calendar_month' cur_year cur_month %}" style="display:inline;">
-              {% csrf_token %}
-              <button type="submit" class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition">
-                送信
-              </button>
-            </form>
             {% else %}
-            <a href="{% url 'google_auth' %}" class="py-2 px-6 border border-orange-500 text-orange-500 rounded text-center hover:bg-orange-500 hover:text-black transition">
-              ✕ Google認証
-            </a>
+            <div class="opacity-20"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.7 12.7a1 1 0 01-1.4 0L10 9.4l-3.3 3.3a1 1 0 01-1.4-1.4l4-4a1 1 0 011.4 0l4 4a1 1 0 010 1.4z"/></svg></div>
             {% endif %}
+          </div>
 
-            <form method="post" action="{% url 'retract_schedule' cur_year cur_month %}" style="display:inline; margin-left:0;">
+          <!-- Down -->
+          <div class="flex justify-center">
+            {% if not forloop.last %}
+            <button onclick="moveEmployee(event, {{ member.id }}, 'down', 'gyomu')" class="move-btn hover:text-yellow-300">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
+            </button>
+            {% else %}
+            <div class="opacity-20"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.7 12.7a1 1 0 01-1.4 0L10 9.4l-3.3 3.3a1 1 0 01-1.4-1.4l4-4a1 1 0 011.4 0l4 4a1 1 0 010 1.4z"/></svg></div>
+            {% endif %}
+          </div>
+
+          <!-- Active checkbox -->
+          <div class="flex justify-center">
+            <form method="post" action="{% url 'employee-toggle-active' member.id %}">
               {% csrf_token %}
-              <button type="submit" class="py-2 px-6 border border-white text-white rounded text-center hover:bg-white hover:text-black transition" onclick="return confirm('今月の登録日付を削除してよろしいですか？');">
-                登録日付の削除
-              </button>
+              <input type="checkbox" class="w-4 h-4" name="is_active"
+                {% if member.is_rotation_active %}checked{% endif %}
+                onchange="this.form.submit()">
             </form>
           </div>
-        </div>
 
+          <div class="text-center">{{ member.order_gyomu }}</div>
+          <div>{{ member.name }}</div>
+          <div class="text-center">{{ member.days_passed|default:"-" }}</div>
+          <div class="text-center text-xs">{{ member.speech_date|date:"Y-m-d"|default:"-" }}</div>
+          <div class="text-center">{{ member.calendar }}</div>
+        </div>
+        {% endfor %}
       </div>
     </div>
-  </body>
+
+
+    <!-- =====================================
+         RIGHT ZONE: ３分間スピーチ
+    ====================================== -->
+    <div class="card">
+      <div class="card-header bg-emerald-800 text-white">３分間スピーチ</div>
+
+      <div class="grid table-header px-2 py-2 border-b border-gray-700"
+           style="grid-template-columns: 40px 40px 40px 60px 1fr 90px 130px 90px;">
+        <div></div>
+        <div></div>
+        <div class="text-center">状態</div>
+        <div class="text-center">順番</div>
+        <div>氏名</div>
+        <div class="text-center">経過日数</div>
+        <div class="text-center">登録日</div>
+        <div class="text-center">今月</div>
+      </div>
+
+      <div class="max-h-[500px] overflow-y-auto text-sm">
+        {% for member in top_zone %}
+        <div class="grid items-center px-2 py-2 border-b border-gray-700 hover:bg-gray-700/40 transition"
+             style="grid-template-columns: 40px 40px 40px 60px 1fr 90px 130px 90px">
+
+          <!-- Up -->
+          <div class="flex justify-center">
+            {% if not forloop.first %}
+            <button onclick="moveEmployee(event, {{ member.id }}, 'up', '3min')" class="move-btn hover:text-yellow-300">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.7 12.7a1 1 0 01-1.4 0L10 9.4l-3.3 3.3a1 1 0 01-1.4-1.4l4-4a1 1 0 011.4 0l4 4a1 1 0 010 1.4z"/></svg>
+            </button>
+            {% else %}
+            <div class="opacity-20"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.7 12.7a1 1 0 01-1.4 0L10 9.4l-3.3 3.3a1 1 0 01-1.4-1.4l4-4a1 1 0 011.4 0l4 4a1 1 0 010 1.4z"/></svg></div>
+            {% endif %}
+          </div>
+
+          <!-- Down -->
+          <div class="flex justify-center">
+            {% if not forloop.last %}
+            <button onclick="moveEmployee(event, {{ member.id }}, 'down', '3min')" class="move-btn hover:text-yellow-300">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
+            </button>
+            {% else %}
+            <div class="opacity-20"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.7 12.7a1 1 0 01-1.4 0L10 9.4l-3.3 3.3a1 1 0 01-1.4-1.4l4-4a1 1 0 011.4 0l4 4a1 1 0 010 1.4z"/></svg></div>
+            {% endif %}
+          </div>
+
+          <!-- Active checkbox -->
+          <div class="flex justify-center">
+            <form method="post" action="{% url 'employee-toggle-active' member.id %}">
+              {% csrf_token %}
+              <input type="checkbox" class="w-4 h-4"
+                {% if member.is_rotation_active %}checked{% endif %}
+                onchange="this.form.submit()">
+            </form>
+          </div>
+
+          <div class="text-center">{{ member.order }}</div>
+          <div>{{ member.name }}</div>
+          <div class="text-center">{{ member.days_passed|default:"-" }}</div>
+          <div class="text-center text-xs">{{ member.speech_date|date:"Y-m-d"|default:"-" }}</div>
+          <div class="text-center">{{ member.calendar }}</div>
+
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+
+
+  <!-- =====================================
+       CONTROL BAR
+  ====================================== -->
+  <div class="card p-6">
+    <div class="flex flex-wrap gap-4 justify-center">
+
+      <button class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを追加</button>
+
+      <button class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを削除</button>
+
+      {% now "Y" as cur_year %}
+      {% now "n" as cur_month %}
+
+      <form method="post" action="{% url 'generate_schedule' %}">
+        {% csrf_token %}
+        <input type="hidden" name="year" value="{{ cur_year }}">
+        <input type="hidden" name="month" value="{{ cur_month }}">
+        <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
+          スケジュール生成
+        </button>
+      </form>
+
+      <a href="{% url 'schedule_preview' cur_year cur_month %}"
+         class="control-btn border-purple-400 text-purple-300 hover:bg-purple-500 hover:text-white">
+        確認画面へ
+      </a>
+
+      {% if google_authenticated %}
+      <form method="post" action="{% url 'send_to_calendar_month' cur_year cur_month %}">
+        {% csrf_token %}
+        <button type="submit" class="control-btn border-green-400 text-green-300 hover:bg-green-500 hover:text-white">
+          送信
+        </button>
+      </form>
+      {% else %}
+      <a href="{% url 'google_auth' %}"
+         class="control-btn border-orange-400 text-orange-300 hover:bg-orange-500 hover:text-white">
+        ✕ Google認証
+      </a>
+      {% endif %}
+
+      <form method="post" action="{% url 'retract_schedule' cur_year cur_month %}">
+        {% csrf_token %}
+        <button type="submit"
+          class="control-btn border-red-400 text-red-300 hover:bg-red-500 hover:text-white"
+          onclick="return confirm('今月の登録日付を削除してよろしいですか？');">
+          登録日付の削除
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
 </html>
