@@ -4,6 +4,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+from django.db import models
 from datetime import date, timedelta
 from .models import Employee, ScheduleEntry, Role, SpeechType
 from google_auth_oauthlib.flow import Flow
@@ -246,6 +247,77 @@ def toggle_active(request, employee_id):
         employee.is_rotation_active = not employee.is_rotation_active
         employee.save()
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))  # redirect back
+
+
+# =====================================================
+# Add Member View
+# =====================================================
+def add_member_view(request):
+    """
+    Handle GET (display form) and POST (create employee) for adding new members.
+    Validates email uniqueness and name requirement.
+    """
+    if request.method == "GET":
+        return render(request, "core/add_member.html")
+    
+    elif request.method == "POST":
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        
+        # Validation: empty name
+        if not name:
+            messages.error(request, "氏名を入力してください。")
+            return render(request, "core/add_member.html", {
+                "name": name,
+                "email": email,
+                "is_active": is_active,
+            })
+        
+        # Validation: duplicate email
+        if Employee.objects.filter(email=email).exists():
+            messages.error(request, "このメールアドレスは既に登録されています。")
+            return render(request, "core/add_member.html", {
+                "name": name,
+                "email": email,
+                "is_active": is_active,
+            })
+        
+        # Validation: email format (basic check)
+        if not email or '@' not in email:
+            messages.error(request, "有効なメールアドレスを入力してください。")
+            return render(request, "core/add_member.html", {
+                "name": name,
+                "email": email,
+                "is_active": is_active,
+            })
+        
+        try:
+            # Get the next order values
+            max_order = Employee.objects.aggregate(models.Max('order'))['order__max'] or -1
+            max_order_gyomu = Employee.objects.aggregate(models.Max('order_gyomu'))['order_gyomu__max'] or -1
+            
+            # Create employee
+            employee = Employee.objects.create(
+                name=name,
+                email=email,
+                employee_id=f"EMP{Employee.objects.count() + 1:03d}",
+                order=max_order + 1,
+                order_gyomu=max_order_gyomu + 1,
+                is_rotation_active=is_active,
+                role=Role.MEMBER,
+            )
+            
+            messages.success(request, f"{name}さんを追加しました！")
+            return redirect("dashboard")
+        
+        except Exception as e:
+            messages.error(request, f"エラーが発生しました: {str(e)}")
+            return render(request, "core/add_member.html", {
+                "name": name,
+                "email": email,
+                "is_active": is_active,
+            })
 
 
 # =====================================================

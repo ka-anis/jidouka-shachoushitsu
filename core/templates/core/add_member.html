@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メンバーを追加</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-gray-100">
+<div class="p-8 min-h-screen">
+
+  <div class="max-w-2xl mx-auto space-y-8">
+
+    <!-- Header -->
+    <div>
+      <h1 class="text-3xl font-bold text-white tracking-tight">メンバーを追加</h1>
+      <p class="text-gray-400 mt-1">新しいメンバーを登録してください</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="space-y-3">
+      {% for message in messages %}
+        {% if message.tags == 'success' %}
+          <div class="bg-green-900/40 border border-green-600 text-green-300 px-4 py-3 rounded-lg">{{ message }}</div>
+        {% elif message.tags == 'error' %}
+          <div class="bg-red-900/40 border border-red-600 text-red-300 px-4 py-3 rounded-lg">{{ message }}</div>
+        {% elif message.tags == 'warning' %}
+          <div class="bg-yellow-900/40 border border-yellow-600 text-yellow-300 px-4 py-3 rounded-lg">{{ message }}</div>
+        {% else %}
+          <div class="bg-blue-900/40 border border-blue-600 text-blue-300 px-4 py-3 rounded-lg">{{ message }}</div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Form -->
+    <form method="POST" action="{% url 'add_member' %}" class="bg-gray-800 rounded-xl shadow-lg p-8 space-y-6">
+      {% csrf_token %}
+
+      <!-- Name Field -->
+      <div>
+        <label for="name" class="block text-sm font-semibold text-gray-200 mb-2">
+          氏名
+          <span class="text-red-400">*</span>
+        </label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value="{{ name }}"
+          placeholder="山田太郎"
+          required
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+        />
+      </div>
+
+      <!-- Email Field -->
+      <div>
+        <label for="email" class="block text-sm font-semibold text-gray-200 mb-2">
+          メールアドレス
+          <span class="text-red-400">*</span>
+        </label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value="{{ email }}"
+          placeholder="user@example.com"
+          required
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+        />
+      </div>
+
+      <!-- Active Checkbox -->
+      <div class="flex items-center gap-3">
+        <input
+          type="checkbox"
+          id="is_active"
+          name="is_active"
+          {% if is_active %}checked{% endif %}
+          class="w-5 h-5 bg-gray-700 border border-gray-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+        />
+        <label for="is_active" class="text-sm font-semibold text-gray-200 cursor-pointer">
+          ローテーションに参加
+        </label>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-4 justify-center pt-4">
+        <a href="{% url 'dashboard' %}"
+           class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition">
+          戻る
+        </a>
+
+        <button type="submit"
+                class="px-8 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition">
+          追加
+        </button>
+      </div>
+    </form>
+
+  </div>
+
+</div>
+</body>
+</html>
