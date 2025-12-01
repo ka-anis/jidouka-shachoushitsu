@@ -93,13 +93,17 @@
          戻る
       </a>
 
-      <form method="POST" action="{% url 'send_to_calendar_month' year month %}">
-        {% csrf_token %}
-        <button type="submit"
-                class="px-6 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg font-medium transition">
-                送信
-        </button>
-      </form>
+      {% if batch_sent %}
+        <button disabled class="px-6 py-2 bg-gray-600 text-white rounded-lg font-medium transition">既に送信済みです</button>
+      {% else %}
+        <form method="POST" action="{% url 'send_to_calendar_month' year month %}">
+          {% csrf_token %}
+          <button type="submit"
+                  class="px-6 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg font-medium transition">
+                  送信
+          </button>
+        </form>
+      {% endif %}
 
       <form method="POST" action="{% url 'retract_schedule' year month %}">
         {% csrf_token %}

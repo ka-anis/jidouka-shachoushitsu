@@ -50,6 +50,21 @@ class Employee(models.Model):
         return self.name
 
 
+# MonthlyEventBatch model
+class MonthlyEventBatch(models.Model):
+    """
+    Tracks event creation batches per month.
+    The `month` field should always be the first day of the month (YYYY-MM-01).
+    Only one row per month is allowed (unique).
+    """
+    month = models.DateField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_sent = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Batch {self.month.isoformat()} sent={self.is_sent}"
+
+
 # ScheduleEntry model 
 class SpeechType(models.TextChoices):
     BUSINESS = "BUSINESS", "業務"
@@ -65,6 +80,11 @@ class ScheduleEntry(models.Model):
     is_cancelled = models.BooleanField(default=False)
     google_event_id = models.CharField(max_length=200, blank=True, null=True)
     is_sent = models.BooleanField(default=False)
+
+    # Link to the MonthlyEventBatch so generated-but-unsent entries persist across navigation
+    batch = models.ForeignKey(
+        MonthlyEventBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name='entries'
+    )
 
     class Meta:
         ordering = ['date']

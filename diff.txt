@@ -1,0 +1,53 @@
+diff --git a/core/templates/core/dashboard.html b/core/templates/core/dashboard.html
+index 1a784f5..c45fc90 100644
+--- a/core/templates/core/dashboard.html
++++ b/core/templates/core/dashboard.html
+@@ -203,25 +203,31 @@
+ 
+       <a id="remove-member-btn" href="{% url 'remove_member_modal' %}" class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを削除</a>
+ 
+-      {% now "Y" as cur_year %}
+-      {% now "n" as cur_month %}
++      <form method="POST" action="{% url 'generate_schedule' %}" style="display:inline;">
++        {% csrf_token %}
++        <input type="hidden" name="year" value="{{ current_year }}">
++        <input type="hidden" name="month" value="{{ current_month }}">
++        <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
++            今月のスケジュール作成
++        </button>
++      </form>
+ 
+-      <form method="post" action="{% url 'generate_schedule' %}">
++      <form method="POST" action="{% url 'generate_schedule' %}" style="display:inline;">
+         {% csrf_token %}
+-        <input type="hidden" name="year" value="{{ cur_year }}">
+-        <input type="hidden" name="month" value="{{ cur_month }}">
++        <input type="hidden" name="year" value="{{ next_year }}">
++        <input type="hidden" name="month" value="{{ next_month }}">
+         <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
+-          スケジュール生成
++            来月のスケジュール作成
+         </button>
+       </form>
+ 
+-      <a href="{% url 'schedule_preview' cur_year cur_month %}"
++      <a href="{% url 'schedule_preview' current_year current_month %}"
+          class="control-btn border-purple-400 text-purple-300 hover:bg-purple-500 hover:text-white">
+         確認画面へ
+       </a>
+ 
+       {% if google_authenticated %}
+-      <form method="post" action="{% url 'send_to_calendar_month' cur_year cur_month %}">
++      <form method="post" action="{% url 'send_to_calendar_month' current_year current_month %}">
+         {% csrf_token %}
+         <button type="submit" class="control-btn border-green-400 text-green-300 hover:bg-green-500 hover:text-white">
+           送信
+@@ -234,7 +240,7 @@
+       </a>
+       {% endif %}
+ 
+-      <form method="post" action="{% url 'retract_schedule' cur_year cur_month %}">
++      <form method="post" action="{% url 'retract_schedule' current_year current_month %}">
+         {% csrf_token %}
+         <button type="submit"
+           class="control-btn border-red-400 text-red-300 hover:bg-red-500 hover:text-white"

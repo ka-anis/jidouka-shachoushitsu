@@ -60,11 +60,18 @@ def dashboard_view(request):
         next_month = current_month + 1
         next_year = current_year
 
+    # Batch info for current month (used to disable send button)
+    month_start = date(current_year, current_month, 1)
+    from .models import MonthlyEventBatch
+    batch = MonthlyEventBatch.objects.filter(month=month_start).first()
+
     context.update({
         'current_year': current_year,
         'current_month': current_month,
         'next_year': next_year,
         'next_month': next_month,
+        'current_batch_sent': bool(batch.is_sent) if batch else False,
+        'current_batch_exists': bool(batch),
     })
 
     return render(request, "core/dashboard.html", context) 
@@ -454,9 +461,9 @@ def _get_business_days(year, month):
 def generate_schedule(request):
     """
     Generate schedule entries for a given month.
-    
+
     POST parameters: year, month
-    
+
     Rules:
     - First 6 business days: no assignment
     - Last 5 business days: assigned using order_gyomu (業務スピーチ)
@@ -468,26 +475,36 @@ def generate_schedule(request):
     except (ValueError, TypeError):
         messages.error(request, "Invalid year or month.")
         return redirect('dashboard')
-    
+
+    # Enforce batch rules
+    month_start = date(year, month, 1)
+    from .models import MonthlyEventBatch
+    batch = MonthlyEventBatch.objects.filter(month=month_start).first()
+    if batch and batch.is_sent:
+        messages.error(request, "この月は既に送信済みのため、スケジュールの作成はできません。")
+        return redirect('dashboard')
+    if not batch:
+        batch = MonthlyEventBatch.objects.create(month=month_start, is_sent=False)
+
     # Get all business days in the month
     business_days = _get_business_days(year, month)
-    
+
     if len(business_days) == 0:
         messages.error(request, f"No business days in {year}-{month:02d}.")
         return redirect('dashboard')
-    
+
     # Split into groups
     first_six = business_days[:6]
     last_five = business_days[-5:] if len(business_days) >= 5 else []
     middle_days = business_days[6:-5] if len(business_days) > 11 else []
-    
+
     # Get employees ordered for rotation
     three_min_employees = Employee.objects.filter(is_rotation_active=True).order_by('order', 'id')
     gyomu_employees = Employee.objects.filter(role=Role.MEMBER, is_rotation_active=True).order_by('order_gyomu', 'id')
-    
+
     # Create schedule entries
     created_count = 0
-    
+
     # First 6 business days: no assignment (or skip)
     for day in first_six:
         ScheduleEntry.objects.update_or_create(
@@ -498,10 +515,11 @@ def generate_schedule(request):
                 'is_cancelled': False,
                 'is_sent': False,
                 'google_event_id': None,
+                'batch': batch,
             }
         )
         created_count += 1
-    
+
     # Middle business days: assign using order (３分間スピーチ)
     if three_min_employees.exists():
         for idx, day in enumerate(middle_days):
@@ -515,10 +533,11 @@ def generate_schedule(request):
                     'is_cancelled': False,
                     'is_sent': False,
                     'google_event_id': None,
+                    'batch': batch,
                 }
             )
             created_count += 1
-    
+
     # Last 5 business days: assign using order_gyomu (業務スピーチ)
     if gyomu_employees.exists():
         for idx, day in enumerate(last_five):
@@ -532,10 +551,11 @@ def generate_schedule(request):
                     'is_cancelled': False,
                     'is_sent': False,
                     'google_event_id': None,
+                    'batch': batch,
                 }
             )
             created_count += 1
-    
+
     messages.success(request, f"Generated schedule for {year}-{month:02d}. ({created_count} entries)")
     return redirect('schedule_preview', year=year, month=month)
 
@@ -547,7 +567,7 @@ def generate_schedule(request):
 def schedule_preview(request, year, month):
     """
     Display the generated schedule for the selected month.
-    
+
     GET parameters: year, month
     """
     try:
@@ -556,20 +576,20 @@ def schedule_preview(request, year, month):
     except (ValueError, TypeError):
         messages.error(request, "Invalid year or month.")
         return redirect('dashboard')
-    
+
     # Get all business days for this month
     business_days = _get_business_days(year, month)
-    
+
     # Load schedule entries for this month
     schedule_entries = ScheduleEntry.objects.filter(
         date__year=year,
         date__month=month
     ).select_related('assigned_employee').order_by('date')
-    
+
     # Group by date for display
     schedule_data = []
     entry_map = {entry.date: entry for entry in schedule_entries}
-    
+
     for day in business_days:
         entry = entry_map.get(day)
         schedule_data.append({
@@ -582,13 +602,21 @@ def schedule_preview(request, year, month):
             'is_sent': entry.is_sent if entry else False,
         })
     schedule_data = schedule_data[6:]
+
+    # Batch info to control send/retract
+    month_start = date(year, month, 1)
+    from .models import MonthlyEventBatch
+    batch = MonthlyEventBatch.objects.filter(month=month_start).first()
+
     context = {
         'year': year,
         'month': month,
         'month_display': f'{year}-{month:02d}',
         'schedule_data': schedule_data,
+        'batch_exists': bool(batch),
+        'batch_sent': bool(batch.is_sent) if batch else False,
     }
-    
+
     return render(request, 'core/schedule_preview.html', context)
 
 
@@ -622,7 +650,7 @@ def _get_google_service(request):
 def send_schedule_to_calendar(request, year, month):
     """
     Send all schedule entries for the selected month to Google Calendar.
-    
+
     POST parameters: year, month
     """
     try:
@@ -631,23 +659,32 @@ def send_schedule_to_calendar(request, year, month):
     except (ValueError, TypeError):
         messages.error(request, "Invalid year or month.")
         return redirect('dashboard')
-    
+
     # Check if user is authenticated with Google
     service = _get_google_service(request)
     if not service:
         messages.error(request, "Not authenticated with Google Calendar. Please authenticate first.")
         return redirect('google_auth')
-    
-    # Load schedule entries for this month
+
+    month_start = date(year, month, 1)
+    from .models import MonthlyEventBatch
+    batch = MonthlyEventBatch.objects.filter(month=month_start).first()
+    if not batch:
+        messages.error(request, "スケジュールが生成されていません。先にスケジュールを作成してください。")
+        return redirect('schedule_preview', year=year, month=month)
+    if batch.is_sent:
+        messages.error(request, "この月は既に送信済みです。")
+        return redirect('schedule_preview', year=year, month=month)
+
+    # Load schedule entries linked to this batch
     schedule_entries = ScheduleEntry.objects.filter(
-        date__year=year,
-        date__month=month,
+        batch=batch,
         assigned_employee__isnull=False
     ).select_related('assigned_employee')
-    
+
     sent_count = 0
     error_count = 0
-    
+
     for entry in schedule_entries:
         try:
             # Validate email
@@ -655,10 +692,10 @@ def send_schedule_to_calendar(request, year, month):
                 messages.warning(request, f"{entry.assigned_employee.name} has no email.")
                 error_count += 1
                 continue
-            
+
             # Create event with just speech type as title
             event_title = entry.get_speech_type_display()  # Just "業務" or "３分間"
-            
+
             event_data = {
                 "summary": event_title,
                 "start": {"date": entry.date.isoformat(), "timeZone": "Asia/Tokyo"},
@@ -667,28 +704,32 @@ def send_schedule_to_calendar(request, year, month):
                     {"email": entry.assigned_employee.email}
                 ],
             }
-            
+
             # DON'T FORGET TO CHANGE THE ID WHEN Setting up a new user
             event = service.events().insert(calendarId="c_d4fadaaa8d92cb15033ceef352f6e8685947cad7f3cb52af359e4a814dccc6da@group.calendar.google.com", body=event_data, sendNotifications=False).execute()
             event_id = event.get('id')
-            
+
             # Save event ID and mark as sent
             entry.google_event_id = event_id
             entry.is_sent = True
             entry.save()
             sent_count += 1
-            
+
         except HttpError as e:
             messages.warning(request, f"Failed to create event for {entry.date}: {str(e)}")
             error_count += 1
         except Exception as e:
             messages.warning(request, f"Error for {entry.date}: {str(e)}")
             error_count += 1
-    
+
+    # Mark batch as sent if we created any events (or even if none?)
+    batch.is_sent = True
+    batch.save()
+
     messages.success(request, f" {sent_count}件　登録完了")
     if error_count > 0:
         messages.warning(request, f"{error_count} events failed to send.")
-    
+
     return redirect('schedule_preview', year=year, month=month)
 
 
@@ -699,7 +740,7 @@ def send_schedule_to_calendar(request, year, month):
 def retract_schedule(request, year, month):
     """
     Delete previously-sent Google Calendar events for the selected month.
-    
+
     POST parameters: year, month
     """
     try:
@@ -708,34 +749,39 @@ def retract_schedule(request, year, month):
     except (ValueError, TypeError):
         messages.error(request, "Invalid year or month.")
         return redirect('dashboard')
-    
+
     # Check if user is authenticated with Google
     service = _get_google_service(request)
     if not service:
         messages.error(request, "Not authenticated with Google Calendar. Please authenticate first.")
         return redirect('google_auth')
-    
-    # Load schedule entries for this month that have been sent
+
+    month_start = date(year, month, 1)
+    from .models import MonthlyEventBatch
+    batch = MonthlyEventBatch.objects.filter(month=month_start).first()
+    if not batch:
+        messages.error(request, "この月の送信情報が見つかりません。")
+        return redirect('schedule_preview', year=year, month=month)
+
+    # Load schedule entries for this batch that were sent
     schedule_entries = ScheduleEntry.objects.filter(
-        date__year=year,
-        date__month=month,
-        is_sent=True,
+        batch=batch,
         google_event_id__isnull=False
     )
-    
+
     deleted_count = 0
     error_count = 0
-    
+
     for entry in schedule_entries:
         try:
             if entry.google_event_id:
-                # Delete from attendee's calendar (where it was created)
+                # Delete from calendar where it was created
                 service.events().delete(
                     # DON'T FORGET TO CHANGE THE ID WHEN Setting up a new user  
                     calendarId="c_d4fadaaa8d92cb15033ceef352f6e8685947cad7f3cb52af359e4a814dccc6da@group.calendar.google.com",
                     eventId=entry.google_event_id
                 ).execute()
-                
+
                 # Clear event ID and mark as not sent
                 entry.google_event_id = None
                 entry.is_sent = False
@@ -754,11 +800,15 @@ def retract_schedule(request, year, month):
         except Exception as e:
             messages.warning(request, f"Error for {entry.date}: {str(e)}")
             error_count += 1
-    
+
+    # After deletion, mark batch as not sent
+    batch.is_sent = False
+    batch.save()
+
     messages.success(request, f"{deleted_count}件　　削除完了")
     if error_count > 0:
         messages.warning(request, f"{error_count} events failed to retract.")
-    
+
     return redirect('schedule_preview', year=year, month=month)
 
 
