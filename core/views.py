@@ -49,6 +49,24 @@ def dashboard_view(request):
         "google_authenticated": google_authenticated,
     }
 
+    # Add current / next month context for schedule generation buttons
+    today = date.today()
+    current_year = today.year
+    current_month = today.month
+    if current_month == 12:
+        next_month = 1
+        next_year = current_year + 1
+    else:
+        next_month = current_month + 1
+        next_year = current_year
+
+    context.update({
+        'current_year': current_year,
+        'current_month': current_month,
+        'next_year': next_year,
+        'next_month': next_month,
+    })
+
     return render(request, "core/dashboard.html", context) 
 
 
