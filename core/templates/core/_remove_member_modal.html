@@ -1,0 +1,20 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-black opacity-50" aria-hidden="true"></div>
+  <div class="bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6 z-10">
+    <h2 class="text-lg font-semibold text-white mb-4">メンバーを削除</h2>
+    <p class="text-gray-300 text-sm mb-4">削除するメンバーのメールアドレスを入力してください。</p>
+    <form id="remove-member-form" method="post" action="{% url 'remove_member_submit' %}" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label for="email" class="block text-sm text-gray-200 mb-1">メールアドレス</label>
+        <input id="email" name="email" type="email" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white" placeholder="user@example.com" />
+        <p id="remove-member-error" class="text-red-400 text-sm mt-2 hidden"></p>
+      </div>
+
+      <div class="flex gap-3 justify-end">
+        <button type="button" id="remove-member-cancel" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded">キャンセル</button>
+        <button type="submit" id="remove-member-submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded">削除する</button>
+      </div>
+    </form>
+  </div>
+</div>

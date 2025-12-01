@@ -39,4 +39,7 @@ urlpatterns = [
     # Dashboard button redirects
     path('send-to-calendar/', views.send_to_calendar_redirect, name='send_to_calendar'),
     path('retract/', views.retract_schedule_redirect, name='retract'),
+    # Remove member modal + submit
+    path('members/remove/', views.remove_member_modal, name='remove_member_modal'),
+    path('members/remove/submit/', views.remove_member_submit, name='remove_member_submit'),
 ]

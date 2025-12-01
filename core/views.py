@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db import models
 from datetime import date, timedelta
 from .models import Employee, ScheduleEntry, Role, SpeechType
+import logging
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -318,6 +319,98 @@ def add_member_view(request):
                 "email": email,
                 "is_active": is_active,
             })
+
+
+# =====================================================
+# Remove member (modal + submit)
+# =====================================================
+logger = logging.getLogger(__name__)
+
+
+def remove_member_modal(request):
+    """
+    GET: return modal fragment for AJAX or full-page fallback.
+    """
+    if request.method != 'GET':
+        return redirect('dashboard')
+
+    # If AJAX request, return fragment
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'core/_remove_member_modal.html')
+
+    # Full page fallback
+    return render(request, 'core/remove_member.html')
+
+
+@require_http_methods(["POST"])
+def remove_member_submit(request):
+    """
+    POST: validate email, remove employee, rebalance orders, nullify schedule entries.
+    Supports AJAX JSON responses or full-page fallback with messages.
+    """
+    email = request.POST.get('email', '').strip().lower()
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if not email:
+        msg = '有効なメールアドレスを入力してください。'
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': msg}, status=400)
+        messages.error(request, msg)
+        return redirect('remove_member_modal')
+
+    try:
+        employee = Employee.objects.filter(email__iexact=email).first()
+        if not employee:
+            msg = 'このメールアドレスは登録されていません。'
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=404)
+            messages.error(request, msg)
+            return redirect('remove_member_modal')
+
+        # log admin and timestamp
+        admin = getattr(request, 'user', None)
+        admin_repr = getattr(admin, 'username', 'anonymous') if admin else 'anonymous'
+        logger.info(f"Removing employee {employee.email} by admin={admin_repr}")
+
+        # Remove / delete employee
+        emp_id = employee.id
+        employee.delete()
+
+        # Nullify schedule entries that referenced this employee
+        ScheduleEntry.objects.filter(assigned_employee_id=emp_id).update(
+            assigned_employee=None,
+            is_sent=False,
+            google_event_id=None
+        )
+
+        # Recompute order (3分間) for all employees preserving relative order
+        all_emps = list(Employee.objects.all().order_by('order', 'id'))
+        for idx, e in enumerate(all_emps, start=1):
+            if e.order != idx:
+                e.order = idx
+                e.save()
+
+        # Recompute order_gyomu for members
+        gyomu_emps = list(Employee.objects.filter(role=Role.MEMBER).order_by('order_gyomu', 'id'))
+        for idx, e in enumerate(gyomu_emps, start=1):
+            if e.order_gyomu != idx:
+                e.order_gyomu = idx
+                e.save()
+
+        success_msg = 'メンバーを削除しました。'
+        if is_ajax:
+            return JsonResponse({'status': 'success', 'message': success_msg})
+
+        messages.success(request, success_msg)
+        return redirect('dashboard')
+
+    except Exception as e:
+        logger.exception('Error removing member')
+        err_msg = 'メンバー削除中にエラーが発生しました。'
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': err_msg}, status=500)
+        messages.error(request, err_msg)
+        return redirect('remove_member_modal')
 
 
 # =====================================================

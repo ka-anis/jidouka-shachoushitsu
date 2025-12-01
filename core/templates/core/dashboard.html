@@ -201,7 +201,7 @@
       <a href="{% url 'add_member' %}"
          class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを追加</a>
 
-      <button class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを削除</button>
+      <a id="remove-member-btn" href="{% url 'remove_member_modal' %}" class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを削除</a>
 
       {% now "Y" as cur_year %}
       {% now "n" as cur_month %}
@@ -247,6 +247,99 @@
   </div>
 
 </div>
+
+  <!-- Modal root for AJAX-inserted modals -->
+  <div id="modal-root"></div>
+
+  <script>
+  // Helper to get CSRF token from cookies
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  document.addEventListener('click', async function (e) {
+    // Open modal when clicking remove-member button
+    const target = e.target.closest('#remove-member-btn');
+    if (!target) return;
+    e.preventDefault();
+
+    try {
+      const res = await fetch(target.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) {
+        // fallback: navigate to href
+        window.location.href = target.href;
+        return;
+      }
+      const html = await res.text();
+      const container = document.getElementById('modal-root');
+      container.innerHTML = html;
+
+      // show modal (already visible by fragment markup). Setup handlers
+      const form = container.querySelector('#remove-member-form');
+      const cancelBtn = container.querySelector('#remove-member-cancel');
+      const errorP = container.querySelector('#remove-member-error');
+      const submitBtn = container.querySelector('#remove-member-submit');
+
+      if (cancelBtn) cancelBtn.addEventListener('click', () => { container.innerHTML = ''; });
+
+      if (form) {
+        form.addEventListener('submit', async function (ev) {
+          ev.preventDefault();
+          if (submitBtn) { submitBtn.disabled = true; }
+          if (errorP) { errorP.classList.add('hidden'); errorP.textContent = ''; }
+
+          const formData = new FormData(form);
+          try {
+            const resp = await fetch(form.action, {
+              method: 'POST',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+              },
+              body: formData
+            });
+
+            const data = await resp.json();
+            if (resp.ok && data.status === 'success') {
+              // show quick toast then reload
+              container.innerHTML = '';
+              // small toast
+              const t = document.createElement('div');
+              t.className = 'fixed bottom-6 right-6 bg-green-600 text-white px-4 py-2 rounded';
+              t.textContent = data.message || 'メンバーを削除しました。';
+              document.body.appendChild(t);
+              setTimeout(() => { t.remove(); location.reload(); }, 900);
+              return;
+            }
+
+            // error
+            const msg = data && data.message ? data.message : 'メンバー削除中にエラーが発生しました。';
+            if (errorP) { errorP.textContent = msg; errorP.classList.remove('hidden'); }
+          } catch (err) {
+            if (errorP) { errorP.textContent = 'メンバー削除中にエラーが発生しました。'; errorP.classList.remove('hidden'); }
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        });
+      }
+
+    } catch (err) {
+      // fallback navigation
+      window.location.href = target.href;
+    }
+  });
+  </script>
 
 </body>
 </html>
