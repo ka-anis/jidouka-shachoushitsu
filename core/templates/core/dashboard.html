@@ -207,9 +207,15 @@
         {% csrf_token %}
         <input type="hidden" name="year" value="{{ current_year }}">
         <input type="hidden" name="month" value="{{ current_month }}">
-        <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
-            今月のスケジュール作成
-        </button>
+        {% if current_batch_sent %}
+          <button type="button" class="control-btn border-blue-400 text-blue-300 bg-gray-600">
+              今月のスケジュール作成（済）
+          </button>
+        {% else %}
+          <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
+              今月のスケジュール作成
+          </button>
+        {% endif %}
       </form>
 
       <form method="POST" action="{% url 'generate_schedule' %}" style="display:inline;">
@@ -221,7 +227,7 @@
         </button>
       </form>
 
-      <a href="{% url 'schedule_preview' current_year current_month %}"
+      <!-- <a href="{% url 'schedule_preview' current_year current_month %}"
          class="control-btn border-purple-400 text-purple-300 hover:bg-purple-500 hover:text-white">
         確認画面へ
       </a>
@@ -253,7 +259,7 @@
           onclick="return confirm('今月の登録日付を削除してよろしいですか？');">
           登録日付の削除
         </button>
-      </form>
+      </form> -->
 
     </div>
   </div>

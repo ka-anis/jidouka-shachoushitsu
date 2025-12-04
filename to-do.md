@@ -15,6 +15,9 @@ backend API （バックエンドAPI関連）:
     - function endpoint split for each service
     - implement businees logic for calculating which days are available for scheduling speeches
         - use the order field to produce events in order
+    - add a person endpoint 
+    - remove a person endpoint
+    
 
 Testing（テスト関連）:
 
