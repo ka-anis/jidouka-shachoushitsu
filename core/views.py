@@ -19,6 +19,49 @@ import calendar as cal_module
 # =====================================================
 # Helper Functions
 # =====================================================
+
+def apply_rotation(current_order, assigned_members, did_speak_map):
+    """
+    Apply rotation logic based on speech history.
+    
+    Groups members into three categories and merges them in order:
+    1. Missed speakers (assigned but did_speak=False) - HIGHEST priority
+    2. Unassigned members - MIDDLE priority (preserve original order)
+    3. Spoke members (assigned and did_speak=True) - LOWEST priority
+    
+    Args:
+        current_order: List of Employee objects in current order (e.g., by .order field)
+        assigned_members: List of Employee objects assigned this month
+        did_speak_map: Dict {employee_id: bool} indicating if each assigned member spoke
+    
+    Returns:
+        List of Employee objects in new rotation order
+    """
+    # Identify the three groups
+    assigned_set = set(emp.id for emp in assigned_members)
+    missed_speakers = []
+    spoke_members = []
+    unassigned_members = []
+    
+    for emp in current_order:
+        if emp.id in assigned_set:
+            # This employee was assigned
+            if did_speak_map.get(emp.id, True):
+                # Checkbox was checked (True) or not present -> they spoke
+                spoke_members.append(emp)
+            else:
+                # Checkbox was unchecked (False) -> they didn't speak
+                missed_speakers.append(emp)
+        else:
+            # This employee was NOT assigned
+            unassigned_members.append(emp)
+    
+    # Merge in the required order
+    new_rotation = missed_speakers + unassigned_members + spoke_members
+    
+    return new_rotation
+
+
 def get_next_month_date(from_date=None):
     """
     Calculate the first day of next month from a given date.
@@ -730,8 +773,10 @@ def send_schedule_to_calendar(request, year, month):
     
     Enforces that batches can only be sent once per month.
     If batch.is_sent is True, rejects the request and shows error message.
+    
+    Also applies rotation logic based on did_speak checkboxes from Kakunin Gamen.
 
-    POST parameters: year, month
+    POST parameters: year, month, did_speak_<date> (checkboxes)
     """
     try:
         year = int(year)
@@ -809,11 +854,85 @@ def send_schedule_to_calendar(request, year, month):
         batch.is_sent = True
         batch.save()
 
+    # ==========================================
+    # ROTATION LOGIC: Apply after sending
+    # ==========================================
+    try:
+        # Parse did_speak checkboxes from POST data
+        # Format: did_speak_<YYYY-MM-DD> = employee_name
+        did_speak_map = {}  # {employee_id: did_speak_bool}
+        
+        # Get all schedule entries for this month to map dates to employees
+        all_entries = ScheduleEntry.objects.filter(
+            batch=batch,
+            assigned_employee__isnull=False
+        ).select_related('assigned_employee')
+        
+        # Debug: Log POST keys
+        logging.debug(f"POST keys for rotation: {list(request.POST.keys())}")
+        
+        for entry in all_entries:
+            date_str = entry.date.strftime('%Y-%m-%d')
+            checkbox_key = f'did_speak_{date_str}'
+            # If checkbox exists in POST, employee spoke. If missing, they didn't.
+            spoke = checkbox_key in request.POST
+            did_speak_map[entry.assigned_employee.id] = spoke
+            logging.debug(f"Employee {entry.assigned_employee.name} ({entry.assigned_employee.id}): {checkbox_key} -> {spoke}")
+        
+        # Get list of assigned members for this month
+        assigned_members = set(
+            Employee.objects.filter(
+                id__in=[e.assigned_employee.id for e in all_entries]
+            )
+        )
+        
+        logging.debug(f"Assigned members: {[e.name for e in assigned_members]}")
+        logging.debug(f"did_speak_map: {did_speak_map}")
+        
+        # Determine which field to update based on speech type
+        # For now, we'll update BOTH order and order_gyomu to maintain consistency
+        # Get current rotation for 3-minute speeches
+        three_min_employees = list(
+            Employee.objects.filter(is_rotation_active=True).order_by('order', 'id')
+        )
+        
+        # Get current rotation for business speeches
+        gyomu_employees = list(
+            Employee.objects.filter(role=Role.MEMBER, is_rotation_active=True).order_by('order_gyomu', 'id')
+        )
+        
+        logging.debug(f"3-min employees before: {[(e.id, e.name, e.order) for e in three_min_employees]}")
+        logging.debug(f"Gyomu employees before: {[(e.id, e.name, e.order_gyomu) for e in gyomu_employees]}")
+        
+        # Apply rotation for 3-minute speeches
+        if three_min_employees:
+            new_order_3min = apply_rotation(three_min_employees, assigned_members, did_speak_map)
+            logging.debug(f"3-min employees after apply_rotation: {[(e.id, e.name) for e in new_order_3min]}")
+            for idx, emp in enumerate(new_order_3min, start=1):
+                emp.order = idx
+                emp.save()
+            logging.debug(f"3-min employees saved with new order")
+        
+        # Apply rotation for business speeches
+        if gyomu_employees:
+            new_order_gyomu = apply_rotation(gyomu_employees, assigned_members, did_speak_map)
+            logging.debug(f"Gyomu employees after apply_rotation: {[(e.id, e.name) for e in new_order_gyomu]}")
+            for idx, emp in enumerate(new_order_gyomu, start=1):
+                emp.order_gyomu = idx
+                emp.save()
+            logging.debug(f"Gyomu employees saved with new order")
+        
+        messages.success(request, "ローテーション更新完了しました。")
+    
+    except Exception as e:
+        messages.warning(request, f"ローテーション更新中にエラーが発生しました: {str(e)}")
+
     messages.success(request, f"{sent_count}件　登録完了")
     if error_count > 0:
         messages.warning(request, f"{error_count} events failed to send.")
 
     return redirect('schedule_preview', year=year, month=month)
+
 
 
 # =====================================================

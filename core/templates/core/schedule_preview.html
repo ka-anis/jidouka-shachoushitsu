@@ -35,85 +35,98 @@
     </div>
     {% endif %}
 
-    <!-- Schedule Table -->
-    <div class="bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-700 text-gray-200 text-xs uppercase tracking-wider">
-          <tr>
-            <th class="px-6 py-4 text-left">日付</th>
-            <th class="px-6 py-4 text-left">曜日</th>
-            <th class="px-6 py-4 text-left">スピーチ種類</th>
-            <th class="px-6 py-4 text-left">氏名</th>
-            <th class="px-6 py-4 text-left">状態</th>
-          </tr>
-        </thead>
+    <!-- Schedule Table Form -->
+    <form method="POST" action="{% url 'send_to_calendar_month' year month %}" id="schedule-form">
+      {% csrf_token %}
+      <div class="bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-700 text-gray-200 text-xs uppercase tracking-wider">
+            <tr>
+              <th class="px-6 py-4 text-left">日付</th>
+              <th class="px-6 py-4 text-left">曜日</th>
+              <th class="px-6 py-4 text-left">スピーチ種類</th>
+              <th class="px-6 py-4 text-left">氏名</th>
+              <th class="px-6 py-4 text-left">実施</th>
+              <th class="px-6 py-4 text-left">状態</th>
+            </tr>
+          </thead>
 
-        <tbody>
-        {% for entry in schedule_data %}
-          <tr class="border-b border-gray-700 hover:bg-gray-700/40 transition">
-            <td class="px-6 py-4">{{ entry.date_display }}</td>
-            <td class="px-6 py-4 text-gray-300">{{ entry.day_name }}曜日</td>
-            <td class="px-6 py-4">
-              {% if entry.speech_type %}
-                {% if entry.speech_type == 'THREE_MIN' %}
-                <span class="px-3 py-1 rounded-full text-xs bg-emerald-600/30 text-emerald-300 font-semibold">
-                  {{ entry.speech_type_display }}
-                </span>
-                {% elif entry.speech_type == 'BUSINESS' %}
-                <span class="px-3 py-1 rounded-full text-xs bg-amber-600/30 text-amber-300 font-semibold">
-                  {{ entry.speech_type_display }}
-                </span>
+          <tbody>
+          {% for entry in schedule_data %}
+            <tr class="border-b border-gray-700 hover:bg-gray-700/40 transition">
+              <td class="px-6 py-4">{{ entry.date_display }}</td>
+              <td class="px-6 py-4 text-gray-300">{{ entry.day_name }}曜日</td>
+              <td class="px-6 py-4">
+                {% if entry.speech_type %}
+                  {% if entry.speech_type == 'THREE_MIN' %}
+                  <span class="px-3 py-1 rounded-full text-xs bg-emerald-600/30 text-emerald-300 font-semibold">
+                    {{ entry.speech_type_display }}
+                  </span>
+                  {% elif entry.speech_type == 'BUSINESS' %}
+                  <span class="px-3 py-1 rounded-full text-xs bg-amber-600/30 text-amber-300 font-semibold">
+                    {{ entry.speech_type_display }}
+                  </span>
+                  {% endif %}
+                {% else %}
+                <span class="px-3 py-1 rounded-full text-xs bg-gray-600/40 text-gray-300">N/A</span>
                 {% endif %}
-              {% else %}
-              <span class="px-3 py-1 rounded-full text-xs bg-gray-600/40 text-gray-300">N/A</span>
-              {% endif %}
-            </td>
-            <td class="px-6 py-4">{{ entry.assigned_employee }}</td>
-            <td class="px-6 py-4">
-              {% if entry.is_sent %}
-              <span class="px-3 py-1 rounded-full text-xs bg-green-600/30 text-green-100 font-semibold">送信済み</span>
-              {% else %}
-              <span class="px-3 py-1 rounded-full text-xs bg-red-600/40 text-red-150 font-semibold">未送信</span>
-              {% endif %}
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="5" class="px-6 py-8 text-center text-gray-400">No schedule entries for this month.</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
+              </td>
+              <td class="px-6 py-4">{{ entry.assigned_employee }}</td>
+              <td class="px-6 py-4">
+                {% if entry.assigned_employee != 'N/A' %}
+                  <input 
+                    type="checkbox" 
+                    name="did_speak_{{ entry.date_display }}"
+                    value="{{ entry.assigned_employee }}"
+                    class="w-4 h-4"
+                    checked>
+                {% else %}
+                  <span class="text-gray-400 text-xs">未割当</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
+                {% if entry.is_sent %}
+                <span class="px-3 py-1 rounded-full text-xs bg-green-600/30 text-green-100 font-semibold">送信済み</span>
+                {% else %}
+                <span class="px-3 py-1 rounded-full text-xs bg-red-600/40 text-red-150 font-semibold">未送信</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-6 py-8 text-center text-gray-400">No schedule entries for this month.</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
-    <!-- Action Buttons -->
-    <div class="flex gap-4 justify-center">
-      <a href="{% url 'dashboard' %}"
-         class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition">
-         戻る
-      </a>
+      <!-- Action Buttons -->
+      <div class="flex gap-4 justify-center mt-8">
+        <a href="{% url 'dashboard' %}"
+           class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition">
+           戻る
+        </a>
 
-      {% if batch_sent %}
-        <button disabled class="px-6 py-2 bg-gray-600 text-white rounded-lg font-medium transition">既に送信済みです</button>
-      {% else %}
-        <form method="POST" action="{% url 'send_to_calendar_month' year month %}">
-          {% csrf_token %}
-          <button type="submit"
+        {% if batch_sent %}
+          <button type="button" disabled class="px-6 py-2 bg-gray-600 text-white rounded-lg font-medium transition">既に送信済みです</button>
+        {% else %}
+          <button type="submit" form="schedule-form"
                   class="px-6 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg font-medium transition">
                   送信
           </button>
-        </form>
-      {% endif %}
+        {% endif %}
 
-      <form method="POST" action="{% url 'retract_schedule' year month %}">
-        {% csrf_token %}
-        <button type="submit"
-                class="px-6 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg font-medium transition"
-                onclick="return confirm('Are you sure you want to retract all sent events?');">
-                登録日付の削除
-        </button>
-      </form>
-    </div>
+        <form method="POST" action="{% url 'retract_schedule' year month %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit"
+                  class="px-6 py-2 bg-red-700 hover:bg-red-600 text-white rounded-lg font-medium transition"
+                  onclick="return confirm('Are you sure you want to retract all sent events?');">
+                  登録日付の削除
+          </button>
+        </form>
+      </div>
+    </form>
 
   </div>
 
