@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.db import models
 from datetime import date, timedelta
-from .models import Employee, ScheduleEntry, Role, SpeechType
+from .models import Employee, ScheduleEntry, Role, SpeechType, MonthlyEventBatch
 import logging
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
@@ -16,12 +16,64 @@ from calendar import monthrange
 import calendar as cal_module
 
 
+# =====================================================
+# Helper Functions
+# =====================================================
+def get_next_month_date(from_date=None):
+    """
+    Calculate the first day of next month from a given date.
+    If from_date is None, uses today.
+    Returns a date object (YYYY-MM-01).
+    """
+    if from_date is None:
+        from_date = date.today()
+    
+    year = from_date.year
+    month = from_date.month
+    
+    if month == 12:
+        next_month = 1
+        next_year = year + 1
+    else:
+        next_month = month + 1
+        next_year = year
+    
+    return date(next_year, next_month, 1)
+
+
+def get_or_create_batch(month_date):
+    """
+    Get or create a MonthlyEventBatch for the given month.
+    Ensures idempotency - no duplicate batches are created.
+    
+    Args:
+        month_date: A date object (preferably YYYY-MM-01)
+    
+    Returns:
+        MonthlyEventBatch instance
+    """
+    month_start = date(month_date.year, month_date.month, 1)
+    batch, created = MonthlyEventBatch.objects.get_or_create(month=month_start)
+    return batch
+
+
 # Create your views here.
 def home(request):
     return render(request, "core/home.html", {"message": "Welcome to the Core Home Page!"})
 
 
 def dashboard_view(request):
+    """
+    Dashboard view that loads employee lists and batch info for current & next months.
+    
+    Context variables:
+    - top_zone: All employees ordered by 'order' (3分間スピーチ)
+    - bottom_zone: Member employees ordered by 'order_gyomu' (業務スピーチ)
+    - google_authenticated: Whether user has authenticated with Google Calendar
+    - current_year, current_month, next_year, next_month: Date info
+    - current_batch_exists, current_batch_sent: Current month batch status
+    - next_batch_exists, next_batch_sent: Next month batch status
+    """
     # Top zone: order by `order` (3分間スピーチ ordering)
     all_employees = Employee.objects.all().order_by("order", "id")
     # Bottom zone: order by `order_gyomu` (業務スピーチ ordering)
@@ -31,7 +83,7 @@ def dashboard_view(request):
         return {
             "id": emp.id,
             "name": emp.name,
-            "is_rotation_active": emp.is_rotation_active,  # <-- correct
+            "is_rotation_active": emp.is_rotation_active,
             "order": getattr(emp, 'order', None),
             "order_gyomu": getattr(emp, 'order_gyomu', None),
             "days_passed": emp.days_since_last_speech(),
@@ -49,29 +101,32 @@ def dashboard_view(request):
         "google_authenticated": google_authenticated,
     }
 
-    # Add current / next month context for schedule generation buttons
+    # Calculate current and next month dates
     today = date.today()
     current_year = today.year
     current_month = today.month
-    if current_month == 12:
-        next_month = 1
-        next_year = current_year + 1
-    else:
-        next_month = current_month + 1
-        next_year = current_year
+    current_month_start = date(current_year, current_month, 1)
+    next_month_start = get_next_month_date(current_month_start)
 
-    # Batch info for current month (used to disable send button)
-    month_start = date(current_year, current_month, 1)
-    from .models import MonthlyEventBatch
-    batch = MonthlyEventBatch.objects.filter(month=month_start).first()
+    # Load batch info for BOTH current and next month
+    current_batch = MonthlyEventBatch.objects.filter(month=current_month_start).first()
+    next_batch = MonthlyEventBatch.objects.filter(month=next_month_start).first()
+
+    # Determine next month's year and month for template
+    next_year = next_month_start.year
+    next_month = next_month_start.month
 
     context.update({
         'current_year': current_year,
         'current_month': current_month,
         'next_year': next_year,
         'next_month': next_month,
-        'current_batch_sent': bool(batch.is_sent) if batch else False,
-        'current_batch_exists': bool(batch),
+        # Current month batch status
+        'current_batch_exists': bool(current_batch),
+        'current_batch_sent': bool(current_batch.is_sent) if current_batch else False,
+        # Next month batch status
+        'next_batch_exists': bool(next_batch),
+        'next_batch_sent': bool(next_batch.is_sent) if next_batch else False,
     })
 
     return render(request, "core/dashboard.html", context) 
@@ -82,23 +137,45 @@ def dashboard_view(request):
 # =====================================================
 def send_to_calendar_redirect(request):
     """
-    Redirect from dashboard 送信 button to current month's send view.
-    Determines current month and redirects to schedule send endpoint.
+    Redirect from dashboard 送信 button to month's send view.
+    
+    Query parameters:
+    - year: target year (optional, defaults to current)
+    - month: target month (optional, defaults to current)
     """
-    today = date.today()
-    year = today.year
-    month = today.month
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    
+    if year is None or month is None:
+        today = date.today()
+        year = int(year) if year else today.year
+        month = int(month) if month else today.month
+    else:
+        year = int(year)
+        month = int(month)
+    
     return redirect('send_to_calendar_month', year=year, month=month)
 
 
 def retract_schedule_redirect(request):
     """
-    Redirect from dashboard リトラクト button to current month's retract view.
-    Determines current month and redirects to schedule retract endpoint.
+    Redirect from dashboard リトラクト button to month's retract view.
+    
+    Query parameters:
+    - year: target year (optional, defaults to current)
+    - month: target month (optional, defaults to current)
     """
-    today = date.today()
-    year = today.year
-    month = today.month
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    
+    if year is None or month is None:
+        today = date.today()
+        year = int(year) if year else today.year
+        month = int(month) if month else today.month
+    else:
+        year = int(year)
+        month = int(month)
+    
     return redirect('retract_schedule', year=year, month=month)
 
 
@@ -465,6 +542,8 @@ def generate_schedule(request):
     POST parameters: year, month
 
     Rules:
+    - A batch can only be generated once per month (use get_or_create_batch)
+    - If batch is already sent, do NOT allow regeneration
     - First 6 business days: no assignment
     - Last 5 business days: assigned using order_gyomu (業務スピーチ)
     - Middle business days: assigned using order (３分間スピーチ)
@@ -476,15 +555,13 @@ def generate_schedule(request):
         messages.error(request, "Invalid year or month.")
         return redirect('dashboard')
 
-    # Enforce batch rules
+    # Enforce batch rules: prevent regeneration of sent batches
     month_start = date(year, month, 1)
-    from .models import MonthlyEventBatch
-    batch = MonthlyEventBatch.objects.filter(month=month_start).first()
-    if batch and batch.is_sent:
+    batch = get_or_create_batch(month_start)
+    
+    if batch.is_sent:
         messages.error(request, "この月は既に送信済みのため、スケジュールの作成はできません。")
         return redirect('dashboard')
-    if not batch:
-        batch = MonthlyEventBatch.objects.create(month=month_start, is_sent=False)
 
     # Get all business days in the month
     business_days = _get_business_days(year, month)
@@ -650,6 +727,9 @@ def _get_google_service(request):
 def send_schedule_to_calendar(request, year, month):
     """
     Send all schedule entries for the selected month to Google Calendar.
+    
+    Enforces that batches can only be sent once per month.
+    If batch.is_sent is True, rejects the request and shows error message.
 
     POST parameters: year, month
     """
@@ -667,13 +747,15 @@ def send_schedule_to_calendar(request, year, month):
         return redirect('google_auth')
 
     month_start = date(year, month, 1)
-    from .models import MonthlyEventBatch
     batch = MonthlyEventBatch.objects.filter(month=month_start).first()
+    
     if not batch:
         messages.error(request, "スケジュールが生成されていません。先にスケジュールを作成してください。")
         return redirect('schedule_preview', year=year, month=month)
+    
+    # ENFORCE: Batch can only be sent once per month
     if batch.is_sent:
-        messages.error(request, "この月は既に送信済みです。")
+        messages.error(request, "この月は既に送信済みです。再度の送信はできません。")
         return redirect('schedule_preview', year=year, month=month)
 
     # Load schedule entries linked to this batch
@@ -722,11 +804,12 @@ def send_schedule_to_calendar(request, year, month):
             messages.warning(request, f"Error for {entry.date}: {str(e)}")
             error_count += 1
 
-    # Mark batch as sent if we created any events (or even if none?)
-    batch.is_sent = True
-    batch.save()
+    # Mark batch as sent only if we successfully sent at least some events
+    if sent_count > 0:
+        batch.is_sent = True
+        batch.save()
 
-    messages.success(request, f" {sent_count}件　登録完了")
+    messages.success(request, f"{sent_count}件　登録完了")
     if error_count > 0:
         messages.warning(request, f"{error_count} events failed to send.")
 
@@ -740,6 +823,7 @@ def send_schedule_to_calendar(request, year, month):
 def retract_schedule(request, year, month):
     """
     Delete previously-sent Google Calendar events for the selected month.
+    Resets batch.is_sent to False so the schedule can be resent if needed.
 
     POST parameters: year, month
     """
@@ -757,7 +841,6 @@ def retract_schedule(request, year, month):
         return redirect('google_auth')
 
     month_start = date(year, month, 1)
-    from .models import MonthlyEventBatch
     batch = MonthlyEventBatch.objects.filter(month=month_start).first()
     if not batch:
         messages.error(request, "この月の送信情報が見つかりません。")
@@ -801,11 +884,11 @@ def retract_schedule(request, year, month):
             messages.warning(request, f"Error for {entry.date}: {str(e)}")
             error_count += 1
 
-    # After deletion, mark batch as not sent
+    # After deletion, reset batch.is_sent to False so schedule can be resent
     batch.is_sent = False
     batch.save()
 
-    messages.success(request, f"{deleted_count}件　　削除完了")
+    messages.success(request, f"{deleted_count}件　削除完了")
     if error_count > 0:
         messages.warning(request, f"{error_count} events failed to retract.")
 

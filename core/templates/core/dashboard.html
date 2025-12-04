@@ -196,70 +196,129 @@
        CONTROL BAR
   ====================================== -->
   <div class="card p-6">
-    <div class="flex flex-wrap gap-4 justify-center">
+    <div class="flex flex-col gap-6">
+      
+      <!-- Row 1: Member Management -->
+      <div class="flex flex-wrap gap-4 justify-center">
+        <a href="{% url 'add_member' %}"
+           class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを追加</a>
 
-      <a href="{% url 'add_member' %}"
-         class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを追加</a>
+        <a id="remove-member-btn" href="{% url 'remove_member_modal' %}" class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを削除</a>
+      </div>
 
-      <a id="remove-member-btn" href="{% url 'remove_member_modal' %}" class="control-btn border-gray-400 text-gray-200 hover:bg-gray-200 hover:text-black">メンバーを削除</a>
-
-      <form method="POST" action="{% url 'generate_schedule' %}" style="display:inline;">
-        {% csrf_token %}
-        <input type="hidden" name="year" value="{{ current_year }}">
-        <input type="hidden" name="month" value="{{ current_month }}">
-        {% if current_batch_sent %}
-          <button type="button" class="control-btn border-blue-400 text-blue-300 bg-gray-600">
-              今月のスケジュール作成（済）
-          </button>
-        {% else %}
-          <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
-              今月のスケジュール作成
-          </button>
-        {% endif %}
-      </form>
-
-      <form method="POST" action="{% url 'generate_schedule' %}" style="display:inline;">
-        {% csrf_token %}
-        <input type="hidden" name="year" value="{{ next_year }}">
-        <input type="hidden" name="month" value="{{ next_month }}">
-        <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
-            来月のスケジュール作成
-        </button>
-      </form>
-
-      <!-- <a href="{% url 'schedule_preview' current_year current_month %}"
-         class="control-btn border-purple-400 text-purple-300 hover:bg-purple-500 hover:text-white">
-        確認画面へ
-      </a>
-
-      {% if google_authenticated %}
-        {% if current_batch_sent %}
-          <button disabled class="control-btn border-green-400 text-green-300 bg-gray-600">
-            既に送信済みです
-          </button>
-        {% else %}
-          <form method="post" action="{% url 'send_to_calendar_month' current_year current_month %}">
+      <!-- Row 2: Current Month Schedule Controls -->
+      <div class="space-y-2">
+        <h3 class="text-center text-sm font-semibold text-gray-300">今月 ({{ current_year }}-{{ current_month|stringformat:"02d" }})</h3>
+        <div class="flex flex-wrap gap-4 justify-center">
+          <form method="POST" action="{% url 'generate_schedule' %}" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="control-btn border-green-400 text-green-300 hover:bg-green-500 hover:text-white">
-              送信
-            </button>
+            <input type="hidden" name="year" value="{{ current_year }}">
+            <input type="hidden" name="month" value="{{ current_month }}">
+            {% if current_batch_sent %}
+              <button type="button" disabled class="control-btn border-blue-400 text-blue-300 bg-gray-600 cursor-not-allowed opacity-60">
+                  スケジュール作成（済）
+              </button>
+            {% else %}
+              <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
+                  スケジュール作成
+              </button>
+            {% endif %}
           </form>
-        {% endif %}
-      {% else %}
-      <a href="{% url 'google_auth' %}"
-         class="control-btn border-orange-400 text-orange-300 hover:bg-orange-500 hover:text-white">
-        ✕ Google認証
-      </a>
-      {% endif %}
 
-      <form method="post" action="{% url 'retract_schedule' current_year current_month %}">
-        {% csrf_token %}
-        <button type="submit"
-          class="control-btn border-red-400 text-red-300 hover:bg-red-500 hover:text-white"
-          onclick="return confirm('今月の登録日付を削除してよろしいですか？');">
-          登録日付の削除
-        </button>
-      </form> -->
+          {% if current_batch_exists %}
+            <a href="{% url 'schedule_preview' current_year current_month %}"
+               class="control-btn border-purple-400 text-purple-300 hover:bg-purple-500 hover:text-white">
+              確認画面へ
+            </a>
+
+            {% if google_authenticated %}
+              {% if current_batch_sent %}
+                <button disabled class="control-btn border-green-400 text-green-300 bg-gray-600 cursor-not-allowed opacity-60">
+                  送信済みです
+                </button>
+              {% else %}
+                <form method="post" action="{% url 'send_to_calendar_month' current_year current_month %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="control-btn border-green-400 text-green-300 hover:bg-green-500 hover:text-white">
+                  （送信）
+                  </button>
+                </form>
+              {% endif %}
+
+              <form method="post" action="{% url 'retract_schedule' current_year current_month %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit"
+                  class="control-btn border-red-400 text-red-300 hover:bg-red-500 hover:text-white"
+                  onclick="return confirm('今月の登録日付を削除してよろしいですか？');">
+                  登録日付の削除
+                </button>
+              </form>
+            {% else %}
+              <a href="{% url 'google_auth' %}"
+                 class="control-btn border-orange-400 text-orange-300 hover:bg-orange-500 hover:text-white">
+                ✕ Google認証
+              </a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Row 3: Next Month Schedule Controls -->
+      <div class="space-y-2">
+        <h3 class="text-center text-sm font-semibold text-gray-300">来月 ({{ next_year }}-{{ next_month|stringformat:"02d" }})</h3>
+        <div class="flex flex-wrap gap-4 justify-center">
+          <form method="POST" action="{% url 'generate_schedule' %}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="year" value="{{ next_year }}">
+            <input type="hidden" name="month" value="{{ next_month }}">
+            {% if next_batch_sent %}
+              <button type="button" disabled class="control-btn border-blue-400 text-blue-300 bg-gray-600 cursor-not-allowed opacity-60">
+                  スケジュール作成（済）
+              </button>
+            {% else %}
+              <button type="submit" class="control-btn border-blue-400 text-blue-300 hover:bg-blue-500 hover:text-white">
+                  スケジュール作成
+              </button>
+            {% endif %}
+          </form>
+
+          {% if next_batch_exists %}
+            <a href="{% url 'schedule_preview' next_year next_month %}"
+               class="control-btn border-purple-400 text-purple-300 hover:bg-purple-500 hover:text-white">
+              確認画面へ
+            </a>
+
+            {% if google_authenticated %}
+              {% if next_batch_sent %}
+                <button disabled class="control-btn border-green-400 text-green-300 bg-gray-600 cursor-not-allowed opacity-60">
+                  送信済みです
+                </button>
+              {% else %}
+                <form method="post" action="{% url 'send_to_calendar_month' next_year next_month %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="control-btn border-green-400 text-green-300 hover:bg-green-500 hover:text-white">
+                  （送信）
+                  </button>
+                </form>
+              {% endif %}
+
+              <form method="post" action="{% url 'retract_schedule' next_year next_month %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit"
+                  class="control-btn border-red-400 text-red-300 hover:bg-red-500 hover:text-white"
+                  onclick="return confirm('来月の登録日付を削除してよろしいですか？');">
+                  登録日付の削除
+                </button>
+              </form>
+            {% else %}
+              <a href="{% url 'google_auth' %}"
+                 class="control-btn border-orange-400 text-orange-300 hover:bg-orange-500 hover:text-white">
+                ✕ Google認証
+              </a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
 
     </div>
   </div>
